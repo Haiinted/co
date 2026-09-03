@@ -1,279 +1,990 @@
+```html
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Face Tracker</title>
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Phone Camera</title>
+
+<!-- PeerJS -->
+<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+
 <style>
-*{box-sizing:border-box}
-body{
-    margin:0;
-    background:#111;
-    color:#fff;
-    font-family:Arial,sans-serif;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    min-height:100vh;
-    padding:20px;
+
+* {
+    box-sizing: border-box;
 }
-h1{margin:5px 0 8px}
-#status{margin-bottom:15px;color:#aaa}
-.camera{
-    position:relative;
-    width:min(900px,95vw);
-    aspect-ratio:16/9;
-    overflow:hidden;
-    border-radius:18px;
-    background:#000;
-    box-shadow:0 0 35px #000;
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    background:
+        radial-gradient(
+            circle at top,
+            #20252d,
+            #07090c 65%
+        );
+
+    color: white;
+    font-family: Arial, sans-serif;
 }
-video,canvas{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    object-fit:cover;
+
+.container {
+    width: 100%;
+    max-width: 900px;
+
+    margin: auto;
+    padding: 25px 15px;
 }
-video{transform:scaleX(-1)}
-canvas{pointer-events:none}
-.info{
-    width:min(900px,95vw);
-    margin-top:15px;
-    padding:14px 18px;
-    border-radius:12px;
-    background:#1d1d1d;
+
+h1 {
+    text-align: center;
+    font-size: 38px;
+    margin: 10px 0;
 }
-.row{
-    display:flex;
-    justify-content:space-between;
-    gap:20px;
-    flex-wrap:wrap;
+
+.subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 30px;
 }
-button{
-    margin-top:12px;
-    padding:10px 18px;
-    border:0;
-    border-radius:10px;
-    cursor:pointer;
-    font-size:16px;
+
+.card {
+    background: rgba(25, 25, 25, .95);
+
+    border: 1px solid #303030;
+
+    border-radius: 18px;
+
+    padding: 25px;
+
+    margin-bottom: 20px;
+
+    box-shadow:
+        0 10px 40px rgba(0,0,0,.3);
 }
+
+.roles {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 15px;
+}
+
+.role {
+    border: 2px solid #303030;
+
+    background: #1d1d1d;
+
+    color: white;
+
+    border-radius: 15px;
+
+    padding: 35px 15px;
+
+    font-size: 20px;
+
+    cursor: pointer;
+
+    transition: .2s;
+}
+
+.role:hover {
+    border-color: #1683ff;
+    transform: translateY(-2px);
+}
+
+button {
+    width: 100%;
+
+    border: 0;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+    margin-top: 15px;
+
+    background: #1683ff;
+
+    color: white;
+
+    font-size: 17px;
+
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0868c9;
+}
+
+button.red {
+    background: #d83b3b;
+}
+
+input {
+    width: 100%;
+
+    padding: 17px;
+
+    background: #090909;
+
+    color: white;
+
+    border: 1px solid #3a3a3a;
+
+    border-radius: 10px;
+
+    text-align: center;
+
+    font-size: 28px;
+
+    letter-spacing: 8px;
+
+    outline: none;
+}
+
+input:focus {
+    border-color: #1683ff;
+}
+
+.code {
+    text-align: center;
+
+    font-size: 52px;
+
+    font-weight: bold;
+
+    letter-spacing: 12px;
+
+    margin: 25px 0;
+}
+
+.status {
+    text-align: center;
+
+    padding: 15px;
+
+    color: #aaa;
+}
+
+.green {
+    color: #42e878;
+}
+
+.redText {
+    color: #ff5555;
+}
+
+video {
+    width: 100%;
+
+    max-height: 650px;
+
+    background: black;
+
+    border-radius: 15px;
+
+    display: block;
+
+    object-fit: contain;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.small {
+    color: #777;
+
+    text-align: center;
+
+    font-size: 13px;
+
+    margin-top: 15px;
+}
+
+.copy {
+    background: #292929;
+}
+
 </style>
+
 </head>
 
 <body>
-<h1>👁️ Face Tracker</h1>
-<div id="status">Загрузка модели...</div>
 
-<div class="camera">
-    <video id="video" autoplay muted playsinline></video>
-    <canvas id="canvas"></canvas>
+
+<div class="container">
+
+
+<h1>📡 Phone Camera</h1>
+
+<div class="subtitle">
+Телефон → компьютер через WebRTC
 </div>
 
-<div class="info">
-    <div class="row">
-        <span>👤 Лицо: <b id="face">—</b></span>
-        <span>👀 Глаза: <b id="eyes">—</b></span>
-        <span>🧭 Голова: <b id="head">—</b></span>
-    </div>
-    <button id="start">Включить камеру</button>
+
+<!-- ========================= -->
+<!-- ВЫБОР -->
+<!-- ========================= -->
+
+<div
+    id="roleCard"
+    class="card"
+>
+
+<h2>Выбери устройство</h2>
+
+<div class="roles">
+
+<button
+    class="role"
+    onclick="phoneMode()"
+>
+📱 Я ТЕЛЕФОН
+</button>
+
+<button
+    class="role"
+    onclick="pcMode()"
+>
+💻 Я КОМПЬЮТЕР
+</button>
+
 </div>
 
-<script type="module">
-import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22";
-const {FaceLandmarker, FilesetResolver} = vision;
+</div>
 
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const status = document.getElementById("status");
-const faceText = document.getElementById("face");
-const eyesText = document.getElementById("eyes");
-const headText = document.getElementById("head");
-const startBtn = document.getElementById("start");
 
-let faceLandmarker;
-let running = false;
+<!-- ========================= -->
+<!-- ТЕЛЕФОН -->
+<!-- ========================= -->
 
-async function loadModel(){
-    const fileset = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
+<div
+    id="phonePanel"
+    class="card hidden"
+>
+
+<h2>📱 Режим телефона</h2>
+
+<p>
+Сообщи этот код компьютеру:
+</p>
+
+<div
+    id="roomCode"
+    class="code"
+>
+------
+</div>
+
+<button
+    class="copy"
+    onclick="copyCode()"
+>
+📋 Скопировать код
+</button>
+
+<div
+    id="phoneStatus"
+    class="status"
+>
+🟡 Создание комнаты...
+</div>
+
+
+<video
+    id="localVideo"
+    autoplay
+    playsinline
+    muted
+></video>
+
+
+<button
+    onclick="startCamera()"
+>
+📷 Включить камеру
+</button>
+
+
+<button
+    class="red"
+    onclick="disconnect()"
+>
+⛔ Отключить
+</button>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- ПК -->
+<!-- ========================= -->
+
+<div
+    id="pcPanel"
+    class="card hidden"
+>
+
+<h2>💻 Режим компьютера</h2>
+
+<p>
+Введи код, который показывает телефон:
+</p>
+
+<input
+    id="codeInput"
+    type="text"
+    inputmode="numeric"
+    maxlength="6"
+    placeholder="000000"
+>
+
+<button
+    onclick="connectToPhone()"
+>
+🔗 Подключиться
+</button>
+
+
+<div
+    id="pcStatus"
+    class="status"
+>
+🔴 Не подключено
+</div>
+
+
+<video
+    id="remoteVideo"
+    autoplay
+    playsinline
+    controls
+></video>
+
+
+<button
+    class="red"
+    onclick="disconnect()"
+>
+⛔ Отключиться
+</button>
+
+</div>
+
+
+<div class="small">
+Видео передаётся напрямую между устройствами через WebRTC.
+</div>
+
+
+</div>
+
+
+<script>
+
+
+/* ==================================
+   ПЕРЕМЕННЫЕ
+================================== */
+
+let peer = null;
+
+let call = null;
+
+let localStream = null;
+
+let roomCode = null;
+
+let role = null;
+
+
+/* ==================================
+   ГЕНЕРАЦИЯ КОДА
+================================== */
+
+function generateCode() {
+
+    return String(
+        Math.floor(
+            100000 +
+            Math.random() * 900000
+        )
     );
 
-    faceLandmarker = await FaceLandmarker.createFromOptions(fileset,{
-        baseOptions:{
-            modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-            delegate:"GPU"
-        },
-        runningMode:"VIDEO",
-        numFaces:1,
-        minFaceDetectionConfidence:0.5,
-        minFacePresenceConfidence:0.5,
-        minTrackingConfidence:0.5,
-        outputFaceBlendshapes:false,
-        outputFacialTransformationMatrixes:true
-    });
-
-    status.textContent="Модель загружена. Нажми «Включить камеру».";
 }
 
-async function startCamera(){
-    try{
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video:{
-                facingMode:"user",
-                width:{ideal:1280},
-                height:{ideal:720}
-            },
-            audio:false
-        });
 
-        video.srcObject=stream;
-        await video.play();
+/* ==================================
+   ПОКАЗ ТЕЛЕФОНА
+================================== */
 
-        canvas.width=video.videoWidth || 1280;
-        canvas.height=video.videoHeight || 720;
+function phoneMode() {
 
-        running=true;
-        startBtn.style.display="none";
-        status.textContent="Камера работает — лицо отслеживается.";
-        requestAnimationFrame(track);
-    }catch(err){
-        console.error(err);
-        status.textContent="Не удалось получить доступ к камере: "+err.message;
-    }
+    role = "phone";
+
+
+    document
+        .getElementById("roleCard")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("phonePanel")
+        .classList.remove("hidden");
+
+
+    createPhonePeer();
+
 }
 
-function distance(a,b){
-    return Math.hypot(a.x-b.x,a.y-b.y);
-}
 
-function drawPoint(p,color="#00ff88",size=2.2){
-    ctx.beginPath();
-    ctx.arc(p.x*canvas.width,p.y*canvas.height,size,0,Math.PI*2);
-    ctx.fillStyle=color;
-    ctx.fill();
-}
+/* ==================================
+   СОЗДАНИЕ PEER ТЕЛЕФОНА
+================================== */
 
-function drawLine(a,b,color="#00ff88",width=1.5){
-    ctx.beginPath();
-    ctx.moveTo(a.x*canvas.width,a.y*canvas.height);
-    ctx.lineTo(b.x*canvas.width,b.y*canvas.height);
-    ctx.strokeStyle=color;
-    ctx.lineWidth=width;
-    ctx.stroke();
-}
+function createPhonePeer() {
 
-function track(){
-    if(!running) return;
+    roomCode = generateCode();
 
-    if(video.readyState >= 2){
-        const now = performance.now();
-        const result = faceLandmarker.detectForVideo(video, now);
 
-        ctx.clearRect(0,0,canvas.width,canvas.height);
+    document
+        .getElementById("roomCode")
+        .textContent =
+        roomCode;
 
-        if(result.faceLandmarks.length){
-            const lm = result.faceLandmarks[0];
 
-            faceText.textContent="найдено";
+    /*
+       Используем код как Peer ID.
 
-            // Все основные точки лица
-            for(const p of lm) drawPoint(p);
+       PeerJS Cloud автоматически
+       занимается signaling.
+    */
 
-            // Контур лица
-            const faceOutline = [
-                10,338,297,332,284,251,389,356,454,323,361,288,
-                397,365,379,378,400,377,152,148,176,149,150,136,
-                172,58,132,93,234,127,162,21,54,103,67,109,10
-            ];
+    peer = new Peer(
+        roomCode,
+        {
+            debug: 1
+        }
+    );
 
-            for(let i=0;i<faceOutline.length-1;i++){
-                drawLine(
-                    lm[faceOutline[i]],
-                    lm[faceOutline[i+1]],
-                    "#00ff88",
-                    2
+
+    peer.on(
+        "open",
+        function(id) {
+
+            console.log(
+                "Phone Peer ID:",
+                id
+            );
+
+
+            document
+                .getElementById("phoneStatus")
+                .innerHTML =
+                "🟢 Код готов. Жду компьютер...";
+
+            document
+                .getElementById("phoneStatus")
+                .className =
+                "status green";
+
+        }
+    );
+
+
+    /*
+       Если компьютер звонит телефону
+    */
+
+    peer.on(
+        "call",
+        function(incomingCall) {
+
+            call = incomingCall;
+
+
+            /*
+               Телефон передаёт свою камеру
+            */
+
+            if (localStream) {
+
+                incomingCall.answer(
+                    localStream
                 );
+
+            } else {
+
+                /*
+                   Если камера ещё не включена,
+                   сначала просим включить её.
+                */
+
+                document
+                    .getElementById("phoneStatus")
+                    .innerHTML =
+                    "⚠️ Компьютер подключается. Включи камеру.";
+
+                incomingCall.answer();
+
             }
 
-            // Глаза
-            const leftEye = [33,160,158,133,153,144];
-            const rightEye = [362,385,387,263,373,380];
 
-            [...leftEye,...rightEye].forEach(i=>drawPoint(lm[i],"#00aaff",3));
+            incomingCall.on(
+                "close",
+                function() {
 
-            drawLine(lm[33],lm[133],"#00aaff",2);
-            drawLine(lm[362],lm[263],"#00aaff",2);
+                    document
+                        .getElementById("phoneStatus")
+                        .innerText =
+                        "🟡 Компьютер отключён";
 
-            // Центры глаз
-            const leftCenter={
-                x:(lm[33].x+lm[133].x)/2,
-                y:(lm[33].y+lm[133].y)/2
-            };
-            const rightCenter={
-                x:(lm[362].x+lm[263].x)/2,
-                y:(lm[362].y+lm[263].y)/2
-            };
-
-            drawPoint(leftCenter,"#ffffff",5);
-            drawPoint(rightCenter,"#ffffff",5);
-
-            eyesText.textContent="отслеживаются";
-
-            // Приблизительная оценка направления головы
-            const nose=lm[1];
-            const leftSide=lm[234];
-            const rightSide=lm[454];
-            const top=lm[10];
-            const chin=lm[152];
-
-            const faceCenterX=(leftSide.x+rightSide.x)/2;
-            const horizontal=nose.x-faceCenterX;
-
-            const faceCenterY=(top.y+chin.y)/2;
-            const vertical=nose.y-faceCenterY;
-
-            let horizontalDirection;
-            if(horizontal < -0.045) horizontalDirection="← влево";
-            else if(horizontal > 0.045) horizontalDirection="→ вправо";
-            else horizontalDirection="по центру";
-
-            let verticalDirection;
-            if(vertical < -0.035) verticalDirection="↑ вверх";
-            else if(vertical > 0.035) verticalDirection="↓ вниз";
-            else verticalDirection="прямо";
-
-            headText.textContent =
-                horizontalDirection+" / "+verticalDirection;
-
-            // Центральная точка носа
-            drawPoint(nose,"#ff3333",6);
-
-            // Линия направления головы
-            drawLine(
-                {x:faceCenterX,y:faceCenterY},
-                {x:nose.x,y:nose.y},
-                "#ff3333",
-                3
+                }
             );
-        }else{
-            faceText.textContent="не найдено";
-            eyesText.textContent="—";
-            headText.textContent="—";
-        }
-    }
 
-    requestAnimationFrame(track);
+
+            incomingCall.on(
+                "error",
+                function(error) {
+
+                    console.error(error);
+
+                }
+            );
+
+        }
+    );
+
+
+    peer.on(
+        "error",
+        function(error) {
+
+            console.error(
+                "Peer error:",
+                error
+            );
+
+
+            if (
+                error.type ===
+                "unavailable-id"
+            ) {
+
+                /*
+                   Код уже занят.
+                   Создаём новый.
+                */
+
+                if (peer) {
+                    peer.destroy();
+                }
+
+                createPhonePeer();
+
+                return;
+
+            }
+
+
+            document
+                .getElementById("phoneStatus")
+                .innerText =
+                "❌ Ошибка: " +
+                error.type;
+
+        }
+    );
+
 }
 
-startBtn.addEventListener("click",startCamera);
 
-loadModel().catch(err=>{
-    console.error(err);
-    status.textContent="Ошибка загрузки модели: "+err.message;
-});
+/* ==================================
+   КАМЕРА
+================================== */
+
+async function startCamera() {
+
+    try {
+
+        localStream =
+            await navigator
+                .mediaDevices
+                .getUserMedia({
+
+                    video: {
+
+                        facingMode:
+                            "environment",
+
+                        width: {
+                            ideal: 1280
+                        },
+
+                        height: {
+                            ideal: 720
+                        },
+
+                        frameRate: {
+                            ideal: 30
+                        }
+
+                    },
+
+                    audio: false
+
+                });
+
+
+        document
+            .getElementById("localVideo")
+            .srcObject =
+            localStream;
+
+
+        document
+            .getElementById("phoneStatus")
+            .innerHTML =
+            "🟢 Камера включена. Код: " +
+            roomCode;
+
+
+        document
+            .getElementById("phoneStatus")
+            .className =
+            "status green";
+
+
+    } catch(error) {
+
+        console.error(error);
+
+
+        alert(
+            "Не удалось получить доступ к камере.\n\n" +
+            error.message
+        );
+
+    }
+
+}
+
+
+/* ==================================
+   РЕЖИМ ПК
+================================== */
+
+function pcMode() {
+
+    role = "pc";
+
+
+    document
+        .getElementById("roleCard")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("pcPanel")
+        .classList.remove("hidden");
+
+
+    /*
+       У ПК ID не нужен.
+       PeerJS выдаст случайный.
+    */
+
+    peer = new Peer({
+        debug: 1
+    });
+
+
+    peer.on(
+        "open",
+        function(id) {
+
+            console.log(
+                "PC Peer ID:",
+                id
+            );
+
+
+            document
+                .getElementById("pcStatus")
+                .innerText =
+                "🟡 Готов к подключению";
+
+        }
+    );
+
+
+    peer.on(
+        "error",
+        function(error) {
+
+            console.error(
+                "PC error:",
+                error
+            );
+
+
+            document
+                .getElementById("pcStatus")
+                .innerText =
+                "❌ " +
+                error.type;
+
+        }
+    );
+
+}
+
+
+/* ==================================
+   ПОДКЛЮЧИТЬСЯ К ТЕЛЕФОНУ
+================================== */
+
+function connectToPhone() {
+
+    let code =
+        document
+            .getElementById("codeInput")
+            .value
+            .trim();
+
+
+    /*
+       Проверяем код
+    */
+
+    if (!/^\d{6}$/.test(code)) {
+
+        alert(
+            "Введи правильный 6-значный код."
+        );
+
+        return;
+
+    }
+
+
+    if (!peer) {
+
+        alert(
+            "Подожди, пока соединение установится."
+        );
+
+        return;
+
+    }
+
+
+    document
+        .getElementById("pcStatus")
+        .innerText =
+        "🟡 Подключение к телефону...";
+
+
+    /*
+       Звоним телефону без своей камеры.
+
+       Это будет односторонняя передача:
+       телефон → ПК
+    */
+
+    call =
+        peer.call(
+            code,
+            new MediaStream()
+        );
+
+
+    call.on(
+        "stream",
+        function(remoteStream) {
+
+            console.log(
+                "Получен видеопоток"
+            );
+
+
+            const video =
+                document
+                    .getElementById(
+                        "remoteVideo"
+                    );
+
+
+            video.srcObject =
+                remoteStream;
+
+
+            video.play().catch(
+                function(error) {
+
+                    console.log(
+                        "Autoplay:",
+                        error
+                    );
+
+                }
+            );
+
+
+            document
+                .getElementById("pcStatus")
+                .innerHTML =
+                "🟢 Камера телефона подключена";
+
+
+            document
+                .getElementById("pcStatus")
+                .className =
+                "status green";
+
+        }
+    );
+
+
+    call.on(
+        "close",
+        function() {
+
+            document
+                .getElementById("pcStatus")
+                .innerText =
+                "🔴 Соединение закрыто";
+
+        }
+    );
+
+
+    call.on(
+        "error",
+        function(error) {
+
+            console.error(error);
+
+
+            document
+                .getElementById("pcStatus")
+                .innerText =
+                "❌ Ошибка видеосоединения";
+
+        }
+    );
+
+}
+
+
+/* ==================================
+   КОПИРОВАНИЕ КОДА
+================================== */
+
+function copyCode() {
+
+    if (!roomCode) {
+        return;
+    }
+
+
+    navigator.clipboard
+        .writeText(roomCode)
+        .then(
+            function() {
+
+                alert(
+                    "Код скопирован: " +
+                    roomCode
+                );
+
+            }
+        );
+
+}
+
+
+/* ==================================
+   ОТКЛЮЧЕНИЕ
+================================== */
+
+function disconnect() {
+
+    if (call) {
+
+        try {
+            call.close();
+        } catch(e) {}
+
+        call = null;
+
+    }
+
+
+    if (localStream) {
+
+        localStream
+            .getTracks()
+            .forEach(
+                function(track) {
+
+                    track.stop();
+
+                }
+            );
+
+        localStream = null;
+
+    }
+
+
+    if (peer) {
+
+        try {
+            peer.destroy();
+        } catch(e) {}
+
+        peer = null;
+
+    }
+
+
+    const localVideo =
+        document.getElementById(
+            "localVideo"
+        );
+
+
+    const remoteVideo =
+        document.getElementById(
+            "remoteVideo"
+        );
+
+
+    localVideo.srcObject = null;
+
+    remoteVideo.srcObject = null;
+
+
+    location.reload();
+
+}
+
 </script>
+
 </body>
+
 </html>
+```
