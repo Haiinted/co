@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Трекер лица</title>
-    <!-- Используем проверенную и быструю библиотеку tracking.js -->
     <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
 
@@ -23,7 +22,7 @@
             margin-top: 20px;
         }
         video {
-            transform: scaleX(-1); /* Зеркальное отображение */
+            transform: scaleX(-1);
             border-radius: 8px;
             background: #000;
         }
@@ -31,7 +30,7 @@
             position: absolute;
             top: 0;
             left: 0;
-            transform: scaleX(-1); /* Синхронное зеркальное отображение холста */
+            transform: scaleX(-1);
         }
         #error-message {
             color: #ff4a4a;
@@ -44,12 +43,12 @@
 <body>
 
     <h1>Отслеживание лица</h1>
-    <p>Если страница белая, подожди 5 секунд или проверь разрешение на камеру в углу адресной строки.</p>
     
     <div id="error-message"></div>
 
     <div class="video-container">
-        <video id="video" width="640" height="480" preload autoplay loop muted></video>
+        <!-- Добавили важные атрибуты для корректного автоплея камеры -->
+        <video id="video" width="640" height="480" autoplay playsinline muted></video>
         <canvas id="canvas" width="640" height="480"></canvas>
     </div>
 
@@ -59,44 +58,41 @@
         const context = canvas.getContext('2d');
         const errorDiv = document.getElementById('error-message');
 
-        // Проверяем доступность веб-камеры в браузере
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                // Если камера доступна, запускаем отслеживание
-                startTracking();
-            })
-            .catch(function(err) {
-                errorDiv.innerHTML = "Ошибка: Нет доступа к веб-камере! <br>Нажми на иконку камеры/замочка в адресной строке браузера и разреши доступ.";
-                console.error(err);
-            });
+        // Запрашиваем камеру с явным указанием размеров кадров
+        navigator.mediaDevices.getUserMedia({ 
+            video: { width: 640, height: 480 } 
+        })
+        .then(function(stream) {
+            // Привязываем видеопоток к тегу video
+            video.srcObject = stream;
+            video.onloadedmetadata = function(e) {
+                video.play();
+                startTracking(); // Запускаем трекер только после того, как видео пошло
+            };
+        })
+        .catch(function(err) {
+            errorDiv.innerHTML = "Ошибка: Камера не отвечает или занята другой программой (например, Google Meet). Закрой другие вкладки и обнови страницу.";
+            console.error(err);
+        });
 
         function startTracking() {
-            // Инициализируем трекер лиц
             const objectsTracker = new tracking.ObjectTracker('face');
             objectsTracker.setInitialScale(4);
             objectsTracker.setStepSize(2);
             objectsTracker.edgesDensity = 0.1;
 
-            // Запускаем отслеживание на нашем видео-элементе
-            tracking.track('#video', objectsTracker, { camera: true });
+            tracking.track('#video', objectsTracker);
 
-            // Каждый раз, когда лицо найдено в кадре
             objectsTracker.on('track', function(event) {
-                // Очищаем холст от старых рамок
                 context.clearRect(0, 0, canvas.width, canvas.height);
 
-                if (event.data.length === 0) {
-                    // Лицо не найдено
-                    return;
-                }
-
                 event.data.forEach(function(rect) {
-                    // Рисуем рамку вокруг лица
+                    // Зеленая рамка вокруг лица
                     context.strokeStyle = '#00ffcc';
                     context.lineWidth = 4;
                     context.strokeRect(rect.x, rect.y, rect.width, rect.height);
 
-                    // Рисуем прицел в центре лица
+                    // Розовый прицел в центре лица
                     const centerX = rect.x + (rect.width / 2);
                     const centerY = rect.y + (rect.height / 2);
                     
