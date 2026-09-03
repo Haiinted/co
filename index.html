@@ -1,717 +1,1661 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>📡 Камера телефона → ноутбук</title>
-    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js">
-    </script>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            background: #0a0a0a;
-            color: #eee;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
-        .container {
-            width: 100%;
-            max-width: 720px;
-            margin: 0 auto;
-        }
-        h1 {
-            text-align: center;
-            font-weight: 500;
-            font-size: 28px;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-        }
-        .sub {
-            text-align: center;
-            color: #777;
-            margin-bottom: 28px;
-            font-size: 15px;
-        }
-        .card {
-            background: #141414;
-            border: 1px solid #2a2a2a;
-            border-radius: 24px;
-            padding: 24px 20px 28px;
-            margin-bottom: 18px;
-            backdrop-filter: blur(2px);
-            transition: all 0.2s;
-        }
-        .card h2 {
-            font-weight: 400;
-            font-size: 20px;
-            margin-bottom: 16px;
-            text-align: center;
-            letter-spacing: 0.5px;
-        }
-        .roles-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-        }
-        .role-btn {
-            background: #1f1f1f;
-            border: 2px solid #333;
-            border-radius: 18px;
-            padding: 28px 8px;
-            font-size: 18px;
-            font-weight: 500;
-            color: #ddd;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-align: center;
-            line-height: 1.4;
-        }
-        .role-btn:hover {
-            border-color: #3b8cff;
-            background: #1f2a3a;
-            transform: scale(1.01);
-        }
-        .role-btn:active {
-            transform: scale(0.97);
-        }
-        .role-btn .icon {
-            display: block;
-            font-size: 34px;
-            margin-bottom: 8px;
-        }
-        .code-display {
-            text-align: center;
-            font-size: 48px;
-            font-weight: 600;
-            letter-spacing: 14px;
-            padding: 16px 0;
-            background: #0d0d0d;
-            border-radius: 16px;
-            margin: 18px 0 12px;
-            color: #b0d4ff;
-            font-family: 'Courier New', monospace;
-            border: 1px dashed #3a5a7a;
-        }
-        .status {
-            text-align: center;
-            padding: 12px;
-            font-size: 15px;
-            color: #aaa;
-            border-radius: 40px;
-            background: #1a1a1a;
-            margin: 12px 0 16px;
-        }
-        .status.green {
-            color: #6fdf9f;
-            background: #14281e;
-            border: 1px solid #2a6a4a;
-        }
-        .status.red {
-            color: #f77;
-            background: #2a1414;
-            border: 1px solid #7a3a3a;
-        }
-        .status.yellow {
-            color: #f9d76e;
-            background: #2a2614;
-            border: 1px solid #7a6a2a;
-        }
-        input.code-input {
-            width: 100%;
-            padding: 16px;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 14px;
-            color: white;
-            font-size: 32px;
-            text-align: center;
-            letter-spacing: 10px;
-            font-family: 'Courier New', monospace;
-            outline: none;
-            transition: 0.2s;
-        }
-        input.code-input:focus {
-            border-color: #3b8cff;
-            background: #0c0c1a;
-        }
-        .btn {
-            width: 100%;
-            border: 0;
-            border-radius: 14px;
-            padding: 16px;
-            font-size: 17px;
-            font-weight: 500;
-            background: #2a6eff;
-            color: white;
-            cursor: pointer;
-            transition: 0.15s;
-            margin-top: 12px;
-        }
-        .btn:hover {
-            background: #1a5ae6;
-            transform: scale(1.01);
-        }
-        .btn:active {
-            transform: scale(0.97);
-        }
-        .btn-danger {
-            background: #b33;
-        }
-        .btn-danger:hover {
-            background: #a22;
-        }
-        .btn-outline {
-            background: transparent;
-            border: 1px solid #555;
-            color: #ccc;
-        }
-        .btn-outline:hover {
-            background: #222;
-            border-color: #888;
-        }
-        .video-box {
-            width: 100%;
-            background: #000;
-            border-radius: 18px;
-            overflow: hidden;
-            margin: 18px 0 10px;
-            aspect-ratio: 16/9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .video-box video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            background: #0a0a0a;
-        }
-        .video-placeholder {
-            color: #555;
-            font-size: 14px;
-            text-align: center;
-            padding: 20px;
-        }
-        .flex-row {
-            display: flex;
-            gap: 12px;
-            margin-top: 10px;
-        }
-        .flex-row .btn {
-            margin-top: 0;
-            flex: 1;
-        }
-        .hidden {
-            display: none !important;
-        }
-        @media (max-width: 480px) {
-            .roles-grid {
-                grid-template-columns: 1fr;
-            }
-            .code-display {
-                font-size: 34px;
-                letter-spacing: 10px;
-            }
-            input.code-input {
-                font-size: 26px;
-                letter-spacing: 6px;
-            }
-        }
-    </style>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Phone Camera</title>
+
+<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    background: #080808;
+    color: white;
+
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    width: 100%;
+    max-width: 900px;
+
+    margin: auto;
+    padding: 25px 15px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 36px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: #151515;
+
+    border: 1px solid #292929;
+
+    border-radius: 18px;
+
+    padding: 25px;
+
+    margin-bottom: 20px;
+}
+
+.roles {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 15px;
+}
+
+.role {
+    border: 2px solid #333;
+
+    background: #202020;
+
+    color: white;
+
+    border-radius: 15px;
+
+    padding: 35px 10px;
+
+    font-size: 20px;
+
+    cursor: pointer;
+}
+
+.role:hover {
+    border-color: #1683ff;
+}
+
+button {
+    width: 100%;
+
+    border: 0;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+    margin-top: 15px;
+
+    background: #1683ff;
+
+    color: white;
+
+    font-size: 17px;
+
+    cursor: pointer;
+}
+
+button:hover {
+    background: #086bd1;
+}
+
+input {
+    width: 100%;
+
+    padding: 16px;
+
+    background: #090909;
+
+    color: white;
+
+    border: 1px solid #333;
+
+    border-radius: 10px;
+
+    text-align: center;
+
+    font-size: 28px;
+
+    letter-spacing: 8px;
+}
+
+.code {
+    text-align: center;
+
+    font-size: 52px;
+
+    font-weight: bold;
+
+    letter-spacing: 12px;
+
+    margin: 25px 0;
+}
+
+.status {
+    text-align: center;
+
+    padding: 15px;
+
+    color: #aaa;
+}
+
+.green {
+    color: #45e879;
+}
+
+.red {
+    background: #d83b3b;
+}
+
+video {
+    width: 100%;
+
+    background: black;
+
+    border-radius: 15px;
+
+    display: block;
+
+    margin-top: 15px;
+}
+
+.hidden {
+    display: none;
+}
+
+.audioButton {
+    background: #292929;
+}
+
+@media(max-width:600px) {
+
+    .roles {
+        grid-template-columns: 1fr;
+    }
+
+    h1 {
+        font-size: 30px;
+    }
+
+    .code {
+        font-size: 40px;
+    }
+
+}
+
+</style>
+
 </head>
+
 <body>
 
-    <div class="container">
+<div class="container">
 
-        <h1>📡 Phone Camera</h1>
-        <div class="sub">Камера телефона → ноутбук</div>
+<h1>📡 Phone Camera</h1>
 
-        <!-- ===== ВЫБОР РОЛИ ===== -->
-        <div id="selectPanel" class="card">
-            <h2>Выберите устройство</h2>
-            <div class="roles-grid">
-                <button class="role-btn" onclick="startPhone()">
-                    <span class="icon">📱</span>
-                    Я телефон
-                    <span style="display:block;font-size:13px;color:#888;margin-top:6px;">отправляю видео</span>
-                </button>
-                <button class="role-btn" onclick="startPC()">
-                    <span class="icon">💻</span>
-                    Я ноутбук
-                    <span style="display:block;font-size:13px;color:#888;margin-top:6px;">принимаю видео</span>
-                </button>
-            </div>
-        </div>
+<div class="subtitle">
+Камера телефона → ноутбук
+</div>
 
-        <!-- ===== ПАНЕЛЬ ТЕЛЕФОНА ===== -->
-        <div id="phonePanel" class="card hidden">
-            <h2>📱 Телефон</h2>
-            <p style="text-align:center;color:#aaa;font-size:14px;">Покажите этот код на ноутбуке</p>
-            <div id="roomCode" class="code-display">------</div>
 
-            <div id="phoneStatus" class="status yellow">⏳ Создание кода...</div>
+<!-- ВЫБОР -->
 
-            <div class="video-box">
-                <video id="localVideo" autoplay playsinline muted></video>
-            </div>
+<div id="selectPanel" class="card">
 
-            <button class="btn" onclick="startCamera()">📷 Включить камеру</button>
-            <button class="btn btn-danger" onclick="reloadPage()">⛔ Остановить</button>
-        </div>
+<h2>Выбери устройство</h2>
 
-        <!-- ===== ПАНЕЛЬ НОУТБУКА ===== -->
-        <div id="pcPanel" class="card hidden">
-            <h2>💻 Ноутбук</h2>
-            <p style="text-align:center;color:#aaa;font-size:14px;">Введите 6-значный код с телефона</p>
-            <input class="code-input" id="codeInput" maxlength="6" inputmode="numeric" placeholder="000000" autocomplete="off">
+<div class="roles">
 
-            <button class="btn" onclick="connectPC()">🔗 Подключиться</button>
+<button
+    class="role"
+    onclick="startPhone()"
+>
+📱 Я ТЕЛЕФОН
+</button>
 
-            <div id="pcStatus" class="status red">🔴 Не подключено</div>
+<button
+    class="role"
+    onclick="startPC()"
+>
+💻 Я НОУТБУК
+</button>
 
-            <div class="video-box">
-                <video id="remoteVideo" autoplay playsinline></video>
-            </div>
+</div>
 
-            <button class="btn btn-danger" onclick="reloadPage()">⛔ Отключиться</button>
-        </div>
+</div>
 
-    </div>
 
-    <script>
-        /* ==========================================================
-           ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-        ========================================================== */
-        let peer = null;
-        let signalConnection = null;
-        let localStream = null;
-        let rtc = null;
-        let roomCode = null;
-        let role = null;
-        let isCameraOn = false;
-        let isPhoneReady = false;
-        let isConnecting = false;
+<!-- ТЕЛЕФОН -->
 
-        /* ==========================================================
-           ВСПОМОГАТЕЛЬНЫЕ
-        ========================================================== */
-        function generateCode() {
-            return String(Math.floor(100000 + Math.random() * 900000));
+<div
+    id="phonePanel"
+    class="card hidden"
+>
+
+<h2>📱 Телефон</h2>
+
+<p>
+Введи этот код на ноутбуке:
+</p>
+
+<div
+    id="roomCode"
+    class="code"
+>
+------
+</div>
+
+<div
+    id="phoneStatus"
+    class="status"
+>
+Создание кода...
+</div>
+
+<video
+    id="localVideo"
+    autoplay
+    playsinline
+    muted
+></video>
+
+<button onclick="startCamera()">
+📷 Включить камеру
+</button>
+
+<button
+    class="red"
+    onclick="stopEverything()"
+>
+⛔ Остановить
+</button>
+
+</div>
+
+
+<!-- НОУТБУК -->
+
+<div
+    id="pcPanel"
+    class="card hidden"
+>
+
+<h2>💻 Ноутбук</h2>
+
+<p>
+Введи код телефона:
+</p>
+
+<input
+    id="codeInput"
+    maxlength="6"
+    inputmode="numeric"
+    placeholder="000000"
+>
+
+<button onclick="connectPC()">
+🔗 Подключиться
+</button>
+
+<div
+    id="pcStatus"
+    class="status"
+>
+🔴 Не подключено
+</div>
+
+<video
+    id="remoteVideo"
+    autoplay
+    playsinline
+></video>
+
+<button
+    class="audioButton"
+    onclick="enableAudio()"
+>
+🔊 Включить звук
+</button>
+
+<button
+    class="red"
+    onclick="stopEverything()"
+>
+⛔ Отключиться
+</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* =========================================
+   ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+========================================= */
+
+let peer = null;
+
+let signalConnection = null;
+
+let localStream = null;
+
+let rtc = null;
+
+let role = null;
+
+let roomCode = null;
+
+let pendingCandidates = [];
+
+let remoteDescriptionSet = false;
+
+let rtcStarted = false;
+
+
+/* =========================================
+   WEBRTC CONFIG
+========================================= */
+
+const rtcConfig = {
+
+    iceServers: [
+
+        {
+            urls: "stun:stun.l.google.com:19302"
+        },
+
+        {
+            urls: "stun:stun1.l.google.com:19302"
+        },
+
+        {
+            urls: "stun:stun2.l.google.com:19302"
         }
 
-        function reloadPage() {
-            if (localStream) {
-                localStream.getTracks().forEach(t => t.stop());
-            }
-            if (rtc) {
-                rtc.close();
-                rtc = null;
-            }
-            if (peer) {
-                peer.destroy();
-                peer = null;
-            }
-            location.reload();
+    ]
+
+};
+
+
+/* =========================================
+   КОД
+========================================= */
+
+function generateCode() {
+
+    return String(
+        Math.floor(
+            100000 +
+            Math.random() * 900000
+        )
+    );
+
+}
+
+
+/* =========================================
+   ТЕЛЕФОН
+========================================= */
+
+function startPhone() {
+
+    role = "phone";
+
+    document
+        .getElementById("selectPanel")
+        .classList.add("hidden");
+
+    document
+        .getElementById("phonePanel")
+        .classList.remove("hidden");
+
+    createPhonePeer();
+
+}
+
+
+/* =========================================
+   PEER ТЕЛЕФОНА
+========================================= */
+
+function createPhonePeer() {
+
+    roomCode = generateCode();
+
+    document
+        .getElementById("roomCode")
+        .innerText = roomCode;
+
+
+    peer = new Peer(
+        roomCode,
+        {
+            debug: 1
         }
+    );
 
-        function setStatus(role, text, type) {
-            const id = role === 'phone' ? 'phoneStatus' : 'pcStatus';
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.innerText = text;
-            el.className = 'status';
-            if (type) el.classList.add(type);
+
+    peer.on(
+        "open",
+        function(id) {
+
+            console.log(
+                "PHONE PEER:",
+                id
+            );
+
+            document
+                .getElementById("phoneStatus")
+                .innerHTML =
+                "🟢 Код готов. Жду ноутбук...";
+
+            document
+                .getElementById("phoneStatus")
+                .className =
+                "status green";
+
         }
+    );
 
-        /* ==========================================================
-           ТЕЛЕФОН
-        ========================================================== */
-        function startPhone() {
-            role = 'phone';
-            document.getElementById('selectPanel').classList.add('hidden');
-            document.getElementById('phonePanel').classList.remove('hidden');
-            createPhonePeer();
-        }
 
-        function createPhonePeer() {
-            roomCode = generateCode();
-            document.getElementById('roomCode').innerText = roomCode;
-            setStatus('phone', '⏳ Создание соединения...', 'yellow');
+    /*
+       Ноутбук подключился
+    */
 
-            peer = new Peer(roomCode, { 
-                debug: 0,
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]
-                }
-            });
+    peer.on(
+        "connection",
+        function(connection) {
 
-            peer.on('open', (id) => {
-                isPhoneReady = true;
-                setStatus('phone', '🟢 Код готов. Ожидаем ноутбук...', 'green');
-                console.log('[Phone] Peer открыт, ID:', id);
-            });
+            console.log(
+                "💻 Ноутбук подключается..."
+            );
 
-            peer.on('connection', (conn) => {
-                console.log('[Phone] Входящее соединение от ноутбука');
-                signalConnection = conn;
-                setStatus('phone', '🟡 Ноутбук подключается...', 'yellow');
+            signalConnection = connection;
 
-                conn.on('open', () => {
-                    console.log('[Phone] DataConnection открыт');
-                    setStatus('phone', '🟢 Ноутбук подключён!', 'green');
-                    
-                    // Если камера уже включена — сразу запускаем RTC
-                    if (isCameraOn && localStream) {
-                        setTimeout(() => createPhoneRTC(), 500);
+
+            signalConnection.on(
+                "open",
+                async function() {
+
+                    console.log(
+                        "💻 SIGNAL CONNECTION OPEN"
+                    );
+
+                    document
+                        .getElementById(
+                            "phoneStatus"
+                        )
+                        .innerHTML =
+                        "🟢 Ноутбук подключён";
+
+
+                    /*
+                       Если камера уже включена —
+                       сразу запускаем WebRTC
+                    */
+
+                    if (localStream) {
+
+                        await createPhoneRTC();
+
                     }
-                });
 
-                conn.on('data', async (data) => {
-                    console.log('[Phone] Получены данные:', data.type);
-                    try {
-                        if (data.type === 'answer') {
-                            if (rtc) {
-                                await rtc.setRemoteDescription(new RTCSessionDescription(data));
-                                console.log('[Phone] Remote description установлен');
-                            }
-                        } else if (data.type === 'candidate' && data.candidate) {
-                            if (rtc) {
-                                await rtc.addIceCandidate(data.candidate);
-                                console.log('[Phone] ICE кандидат добавлен');
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('[Phone] Ошибка обработки сигнала:', e);
-                    }
-                });
-
-                conn.on('close', () => {
-                    console.log('[Phone] DataConnection закрыт');
-                    setStatus('phone', '🔴 Ноутбук отключился', 'red');
-                    signalConnection = null;
-                    if (rtc) {
-                        rtc.close();
-                        rtc = null;
-                    }
-                });
-            });
-
-            peer.on('error', (err) => {
-                console.warn('[Phone] Ошибка Peer:', err);
-                if (err.type === 'unavailable-id') {
-                    peer.destroy();
-                    setTimeout(() => createPhonePeer(), 300);
-                } else {
-                    setStatus('phone', '❌ Ошибка: ' + err.message, 'red');
                 }
-            });
-        }
+            );
 
-        /* ==========================================================
-           КАМЕРА ТЕЛЕФОНА
-        ========================================================== */
-        async function startCamera() {
-            if (isCameraOn) {
-                setStatus('phone', '🟢 Камера уже работает', 'green');
-                return;
-            }
-            try {
-                console.log('[Phone] Запрос камеры...');
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 30 }
-                    },
-                    audio: false
-                });
 
-                document.getElementById('localVideo').srcObject = localStream;
-                isCameraOn = true;
-                setStatus('phone', '🟢 Камера включена', 'green');
-                console.log('[Phone] Камера включена');
+            signalConnection.on(
+                "data",
+                async function(data) {
 
-                // Если ноутбук уже подключён — создаём RTC
-                if (signalConnection && signalConnection.open) {
-                    setTimeout(() => createPhoneRTC(), 500);
-                } else {
-                    setStatus('phone', '🟢 Камера готова, ждём ноутбук...', 'green');
-                }
-            } catch (err) {
-                console.error('[Phone] Ошибка камеры:', err);
-                alert('Ошибка доступа к камере:\n' + err.message);
-                setStatus('phone', '❌ Ошибка камеры', 'red');
-            }
-        }
+                    console.log(
+                        "📡 PHONE SIGNAL:",
+                        data
+                    );
 
-        /* ==========================================================
-           WEBRTC НА ТЕЛЕФОНЕ
-        ========================================================== */
-        function createPhoneRTC() {
-            if (!signalConnection || !signalConnection.open) {
-                console.log('[Phone] Нет соединения с ноутбуком');
-                setStatus('phone', '⏳ Нет соединения с ноутбуком', 'yellow');
-                return;
-            }
-            
-            if (rtc) {
-                console.log('[Phone] Закрываем старый RTC');
-                rtc.close();
-                rtc = null;
-            }
 
-            console.log('[Phone] Создаём RTC...');
-            rtc = new RTCPeerConnection({
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            });
+                    /* ANSWER */
 
-            // Добавляем треки камеры
-            localStream.getTracks().forEach(track => {
-                rtc.addTrack(track, localStream);
-                console.log('[Phone] Добавлен трек:', track.kind);
-            });
+                    if (
+                        data.type === "answer"
+                    ) {
 
-            // Отправляем ICE кандидаты
-            rtc.onicecandidate = (event) => {
-                if (event.candidate && signalConnection && signalConnection.open) {
-                    signalConnection.send({
-                        type: 'candidate',
-                        candidate: event.candidate
-                    });
-                    console.log('[Phone] Отправлен ICE кандидат');
-                }
-            };
-
-            rtc.oniceconnectionstatechange = () => {
-                console.log('[Phone] ICE состояние:', rtc.iceConnectionState);
-                if (rtc.iceConnectionState === 'connected') {
-                    setStatus('phone', '🟢 Видео транслируется!', 'green');
-                }
-            };
-
-            // Создаём offer
-            rtc.createOffer()
-                .then(offer => {
-                    console.log('[Phone] Offer создан');
-                    return rtc.setLocalDescription(offer);
-                })
-                .then(() => {
-                    if (signalConnection && signalConnection.open) {
-                        signalConnection.send({
-                            type: 'offer',
-                            sdp: rtc.localDescription.sdp
-                        });
-                        console.log('[Phone] Offer отправлен');
-                        setStatus('phone', '🟡 Отправляем видео...', 'yellow');
-                    }
-                })
-                .catch(err => {
-                    console.error('[Phone] Ошибка createOffer:', err);
-                    setStatus('phone', '❌ Ошибка RTC', 'red');
-                });
-        }
-
-        /* ==========================================================
-           НОУТБУК
-        ========================================================== */
-        function startPC() {
-            role = 'pc';
-            document.getElementById('selectPanel').classList.add('hidden');
-            document.getElementById('pcPanel').classList.remove('hidden');
-            setStatus('pc', '🟡 Инициализация...', 'yellow');
-
-            peer = new Peer({
-                debug: 0,
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]
-                }
-            });
-
-            peer.on('open', () => {
-                console.log('[PC] Peer открыт');
-                setStatus('pc', '🟢 Готов. Введите код телефона.', 'green');
-            });
-
-            peer.on('error', (err) => {
-                console.warn('[PC] Ошибка Peer:', err);
-                setStatus('pc', '❌ ' + err.message, 'red');
-            });
-        }
-
-        /* ==========================================================
-           ПОДКЛЮЧЕНИЕ НОУТБУКА
-        ========================================================== */
-        function connectPC() {
-            if (isConnecting) return;
-            
-            const code = document.getElementById('codeInput').value.trim();
-            if (!/^\d{6}$/.test(code)) {
-                alert('Введите ровно 6 цифр.');
-                return;
-            }
-
-            if (!peer) {
-                setStatus('pc', '❌ Peer не инициализирован', 'red');
-                return;
-            }
-
-            isConnecting = true;
-            setStatus('pc', '🟡 Подключение к ' + code + '...', 'yellow');
-
-            // Закрываем старый сигнальный канал
-            if (signalConnection) {
-                try { signalConnection.close(); } catch (e) {}
-                signalConnection = null;
-            }
-
-            signalConnection = peer.connect(code, { reliable: true });
-
-            signalConnection.on('open', () => {
-                console.log('[PC] DataConnection открыт');
-                isConnecting = false;
-                setStatus('pc', '🟢 Телефон найден! Ожидаем видео...', 'green');
-            });
-
-            signalConnection.on('data', async (data) => {
-                console.log('[PC] Получены данные:', data.type);
-                try {
-                    if (data.type === 'offer') {
                         if (!rtc) {
-                            createPCRTC();
+                            console.log(
+                                "RTC ещё не создан"
+                            );
+                            return;
                         }
-                        console.log('[PC] Устанавливаем remote description');
-                        await rtc.setRemoteDescription(new RTCSessionDescription({
-                            type: 'offer',
-                            sdp: data.sdp
-                        }));
-                        const answer = await rtc.createAnswer();
-                        await rtc.setLocalDescription(answer);
-                        if (signalConnection && signalConnection.open) {
-                            signalConnection.send({
-                                type: 'answer',
-                                sdp: answer.sdp
-                            });
-                            console.log('[PC] Answer отправлен');
+
+
+                        try {
+
+                            await rtc
+                                .setRemoteDescription({
+
+                                    type: "answer",
+
+                                    sdp: data.sdp
+
+                                });
+
+
+                            remoteDescriptionSet =
+                                true;
+
+
+                            console.log(
+                                "✅ ANSWER УСТАНОВЛЕН"
+                            );
+
+
+                            /*
+                               Добавляем накопленные ICE
+                            */
+
+                            await flushCandidates();
+
+
+                        } catch(error) {
+
+                            console.error(
+                                "ANSWER ERROR:",
+                                error
+                            );
+
                         }
-                    } else if (data.type === 'candidate' && data.candidate) {
-                        if (rtc) {
-                            await rtc.addIceCandidate(data.candidate);
-                            console.log('[PC] ICE кандидат добавлен');
-                        }
+
                     }
-                } catch (e) {
-                    console.warn('[PC] Ошибка обработки сигнала:', e);
-                }
-            });
 
-            signalConnection.on('close', () => {
-                console.log('[PC] DataConnection закрыт');
-                isConnecting = false;
-                setStatus('pc', '🔴 Соединение с телефоном потеряно', 'red');
-                if (rtc) {
-                    rtc.close();
-                    rtc = null;
-                }
-                document.getElementById('remoteVideo').srcObject = null;
-            });
 
-            // Таймаут
-            setTimeout(() => {
-                if (signalConnection && !signalConnection.open) {
-                    console.log('[PC] Таймаут подключения');
-                    isConnecting = false;
-                    setStatus('pc', '❌ Не удалось подключиться к телефону', 'red');
-                    try { signalConnection.close(); } catch (e) {}
-                    signalConnection = null;
+                    /* ICE */
+
+                    if (
+                        data.type === "candidate"
+                    ) {
+
+                        if (
+                            rtc &&
+                            remoteDescriptionSet
+                        ) {
+
+                            try {
+
+                                await rtc
+                                    .addIceCandidate(
+                                        data.candidate
+                                    );
+
+                            } catch(error) {
+
+                                console.error(
+                                    "ICE ERROR:",
+                                    error
+                                );
+
+                            }
+
+                        } else {
+
+                            /*
+                               ICE пришёл раньше answer
+                            */
+
+                            pendingCandidates.push(
+                                data.candidate
+                            );
+
+                            console.log(
+                                "ICE добавлен в очередь"
+                            );
+
+                        }
+
+                    }
+
                 }
-            }, 10000);
+            );
+
+
+            signalConnection.on(
+                "close",
+                function() {
+
+                    document
+                        .getElementById(
+                            "phoneStatus"
+                        )
+                        .innerText =
+                        "🔴 Ноутбук отключился";
+
+                }
+            );
+
         }
+    );
 
-        /* ==========================================================
-           WEBRTC НА НОУТБУКЕ
-        ========================================================== */
-        function createPCRTC() {
-            if (rtc) {
-                rtc.close();
-                rtc = null;
+
+    peer.on(
+        "error",
+        function(error) {
+
+            console.error(
+                "PHONE PEER ERROR:",
+                error
+            );
+
+
+            if (
+                error.type ===
+                "unavailable-id"
+            ) {
+
+                peer.destroy();
+
+                setTimeout(
+                    createPhonePeer,
+                    500
+                );
+
             }
 
-            console.log('[PC] Создаём RTC...');
-            rtc = new RTCPeerConnection({
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            });
+        }
+    );
 
-            rtc.ontrack = (event) => {
-                console.log('[PC] Получен видеопоток!');
-                const video = document.getElementById('remoteVideo');
-                if (event.streams && event.streams[0]) {
-                    video.srcObject = event.streams[0];
-                    video.play().catch(e => console.warn('[PC] Ошибка play:', e));
-                    setStatus('pc', '🟢 КАМЕРА ТЕЛЕФОНА РАБОТАЕТ!', 'green');
-                }
-            };
+}
 
-            rtc.onicecandidate = (event) => {
-                if (event.candidate && signalConnection && signalConnection.open) {
-                    signalConnection.send({
-                        type: 'candidate',
-                        candidate: event.candidate
-                    });
-                    console.log('[PC] Отправлен ICE кандидат');
-                }
-            };
 
-            rtc.oniceconnectionstatechange = () => {
-                console.log('[PC] ICE состояние:', rtc.iceConnectionState);
-                if (rtc.iceConnectionState === 'connected') {
-                    setStatus('pc', '🟢 Видео получено!', 'green');
-                }
-            };
+/* =========================================
+   КАМЕРА ТЕЛЕФОНА
+========================================= */
 
-            rtc.addTransceiver('video', { direction: 'recvonly' });
-            console.log('[PC] RTC создан, ожидаем offer');
+async function startCamera() {
+
+    try {
+
+        /*
+           ВАЖНО:
+           Теперь включаем и видео,
+           и микрофон.
+        */
+
+        localStream =
+            await navigator
+                .mediaDevices
+                .getUserMedia({
+
+                    video: {
+
+                        facingMode: {
+                            ideal: "environment"
+                        },
+
+                        width: {
+                            ideal: 1280
+                        },
+
+                        height: {
+                            ideal: 720
+                        },
+
+                        frameRate: {
+                            ideal: 30
+                        }
+
+                    },
+
+                    audio: {
+
+                        echoCancellation: true,
+
+                        noiseSuppression: true,
+
+                        autoGainControl: true
+
+                    }
+
+                });
+
+
+        document
+            .getElementById("localVideo")
+            .srcObject =
+            localStream;
+
+
+        document
+            .getElementById("phoneStatus")
+            .innerHTML =
+            "🟢 Камера и микрофон включены";
+
+        document
+            .getElementById("phoneStatus")
+            .className =
+            "status green";
+
+
+        /*
+           Если ноутбук уже подключён
+        */
+
+        if (
+            signalConnection &&
+            signalConnection.open
+        ) {
+
+            await createPhoneRTC();
+
         }
 
-        /* ==========================================================
-           АВТОФОКУС И ОБРАБОТКА ВВОДА
-        ========================================================== */
-        document.addEventListener('DOMContentLoaded', () => {
-            const input = document.getElementById('codeInput');
-            if (input) {
-                input.addEventListener('input', function() {
-                    this.value = this.value.replace(/\D/g, '').slice(0, 6);
-                });
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') connectPC();
-                });
+    } catch(error) {
+
+        console.error(
+            error
+        );
+
+        alert(
+            "Не удалось включить камеру/микрофон:\n\n" +
+            error.message
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   WEBRTC ТЕЛЕФОНА
+========================================= */
+
+async function createPhoneRTC() {
+
+    /*
+       Не создаём второе соединение
+    */
+
+    if (rtcStarted) {
+
+        console.log(
+            "RTC уже запущен"
+        );
+
+        return;
+
+    }
+
+    if (!localStream) {
+
+        console.log(
+            "Нет камеры"
+        );
+
+        return;
+
+    }
+
+    if (
+        !signalConnection ||
+        !signalConnection.open
+    ) {
+
+        console.log(
+            "Нет SIGNAL соединения"
+        );
+
+        return;
+
+    }
+
+
+    rtcStarted = true;
+
+    pendingCandidates = [];
+
+    remoteDescriptionSet = false;
+
+
+    rtc =
+        new RTCPeerConnection(
+            rtcConfig
+        );
+
+
+    /*
+       Камера + микрофон
+    */
+
+    localStream
+        .getTracks()
+        .forEach(
+            function(track) {
+
+                rtc.addTrack(
+                    track,
+                    localStream
+                );
+
             }
+        );
+
+
+    /*
+       ICE
+    */
+
+    rtc.onicecandidate =
+        function(event) {
+
+            if (
+                event.candidate &&
+                signalConnection &&
+                signalConnection.open
+            ) {
+
+                signalConnection.send({
+
+                    type: "candidate",
+
+                    candidate:
+                        event.candidate
+
+                });
+
+            }
+
+        };
+
+
+    /*
+       Состояние соединения
+    */
+
+    rtc.onconnectionstatechange =
+        function() {
+
+            console.log(
+                "PHONE RTC:",
+                rtc.connectionState
+            );
+
+
+            if (
+                rtc.connectionState ===
+                "connected"
+            ) {
+
+                document
+                    .getElementById(
+                        "phoneStatus"
+                    )
+                    .innerHTML =
+                    "🟢 КАМЕРА ПЕРЕДАЁТСЯ НА НОУТБУК";
+
+            }
+
+
+            if (
+                rtc.connectionState ===
+                "failed"
+            ) {
+
+                document
+                    .getElementById(
+                        "phoneStatus"
+                    )
+                    .innerText =
+                    "❌ WebRTC соединение не удалось";
+
+            }
+
+        };
+
+
+    /*
+       Создаём OFFER
+    */
+
+    try {
+
+        const offer =
+            await rtc.createOffer({
+
+                offerToReceiveAudio: false,
+
+                offerToReceiveVideo: false
+
+            });
+
+
+        await rtc
+            .setLocalDescription(
+                offer
+            );
+
+
+        signalConnection.send({
+
+            type: "offer",
+
+            sdp:
+                rtc.localDescription.sdp
+
         });
 
-        console.log('📡 Phone Camera загружен');
-    </script>
+
+        console.log(
+            "📤 OFFER отправлен"
+        );
+
+    } catch(error) {
+
+        console.error(
+            "OFFER ERROR:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   ICE QUEUE
+========================================= */
+
+async function flushCandidates() {
+
+    if (!rtc) {
+        return;
+    }
+
+
+    for (
+        const candidate
+        of pendingCandidates
+    ) {
+
+        try {
+
+            await rtc
+                .addIceCandidate(
+                    candidate
+                );
+
+        } catch(error) {
+
+            console.error(
+                "QUEUED ICE ERROR:",
+                error
+            );
+
+        }
+
+    }
+
+
+    pendingCandidates = [];
+
+}
+
+
+/* =========================================
+   НОУТБУК
+========================================= */
+
+function startPC() {
+
+    role = "pc";
+
+
+    document
+        .getElementById("selectPanel")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("pcPanel")
+        .classList.remove("hidden");
+
+
+    peer =
+        new Peer({
+            debug: 1
+        });
+
+
+    peer.on(
+        "open",
+        function() {
+
+            document
+                .getElementById("pcStatus")
+                .innerText =
+                "🟢 Готов. Введи код телефона.";
+
+        }
+    );
+
+
+    peer.on(
+        "error",
+        function(error) {
+
+            console.error(
+                "PC PEER ERROR:",
+                error
+            );
+
+
+            document
+                .getElementById("pcStatus")
+                .innerText =
+                "❌ " +
+                error.type;
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   ПОДКЛЮЧЕНИЕ НОУТБУКА
+========================================= */
+
+function connectPC() {
+
+    const code =
+        document
+            .getElementById("codeInput")
+            .value
+            .trim();
+
+
+    if (!/^\d{6}$/.test(code)) {
+
+        alert(
+            "Введи 6 цифр."
+        );
+
+        return;
+
+    }
+
+
+    document
+        .getElementById("pcStatus")
+        .innerText =
+        "🟡 Подключение к телефону...";
+
+
+    signalConnection =
+        peer.connect(
+            code,
+            {
+                reliable: true
+            }
+        );
+
+
+    signalConnection.on(
+        "open",
+        function() {
+
+            console.log(
+                "📡 SIGNAL CONNECTED"
+            );
+
+
+            document
+                .getElementById("pcStatus")
+                .innerText =
+                "🟢 Телефон найден. Ждём камеру...";
+
+        }
+    );
+
+
+    signalConnection.on(
+        "data",
+        async function(data) {
+
+            console.log(
+                "📡 PC SIGNAL:",
+                data
+            );
+
+
+            /* =========================
+               OFFER
+            ========================= */
+
+            if (
+                data.type === "offer"
+            ) {
+
+                console.log(
+                    "📥 OFFER получен"
+                );
+
+
+                await createPCRTC();
+
+
+                try {
+
+                    await rtc
+                        .setRemoteDescription({
+
+                            type: "offer",
+
+                            sdp: data.sdp
+
+                        });
+
+
+                    remoteDescriptionSet =
+                        true;
+
+
+                    /*
+                       Добавляем ICE,
+                       которые могли прийти раньше
+                    */
+
+                    await flushCandidates();
+
+
+                    const answer =
+                        await rtc
+                            .createAnswer();
+
+
+                    await rtc
+                        .setLocalDescription(
+                            answer
+                        );
+
+
+                    signalConnection.send({
+
+                        type: "answer",
+
+                        sdp:
+                            rtc.localDescription.sdp
+
+                    });
+
+
+                    console.log(
+                        "📤 ANSWER отправлен"
+                    );
+
+
+                } catch(error) {
+
+                    console.error(
+                        "ANSWER ERROR:",
+                        error
+                    );
+
+                    document
+                        .getElementById(
+                            "pcStatus"
+                        )
+                        .innerText =
+                        "❌ Ошибка WebRTC: " +
+                        error.message;
+
+                }
+
+            }
+
+
+            /* =========================
+               ICE
+            ========================= */
+
+            if (
+                data.type === "candidate"
+            ) {
+
+                if (
+                    rtc &&
+                    remoteDescriptionSet
+                ) {
+
+                    try {
+
+                        await rtc
+                            .addIceCandidate(
+                                data.candidate
+                            );
+
+                    } catch(error) {
+
+                        console.error(
+                            "PC ICE ERROR:",
+                            error
+                        );
+
+                    }
+
+                } else {
+
+                    pendingCandidates.push(
+                        data.candidate
+                    );
+
+                    console.log(
+                        "📦 PC ICE добавлен в очередь"
+                    );
+
+                }
+
+            }
+
+        }
+    );
+
+
+    signalConnection.on(
+        "close",
+        function() {
+
+            document
+                .getElementById("pcStatus")
+                .innerText =
+                "🔴 Телефон отключился";
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   WEBRTC НОУТБУКА
+========================================= */
+
+async function createPCRTC() {
+
+    /*
+       Если уже создан
+    */
+
+    if (rtc) {
+
+        return;
+
+    }
+
+
+    pendingCandidates = [];
+
+    remoteDescriptionSet = false;
+
+
+    rtc =
+        new RTCPeerConnection(
+            rtcConfig
+        );
+
+
+    /*
+       Получаем ВСЕ треки
+       телефона:
+       видео + аудио
+    */
+
+    rtc.ontrack =
+        function(event) {
+
+            console.log(
+                "🎥 TRACK ПОЛУЧЕН:",
+                event.track.kind
+            );
+
+
+            const video =
+                document
+                    .getElementById(
+                        "remoteVideo"
+                    );
+
+
+            /*
+               Используем поток
+               из события
+            */
+
+            if (
+                event.streams &&
+                event.streams[0]
+            ) {
+
+                video.srcObject =
+                    event.streams[0];
+
+            } else {
+
+                /*
+                   Запасной вариант
+                */
+
+                if (!video.srcObject) {
+
+                    video.srcObject =
+                        new MediaStream();
+
+                }
+
+                video.srcObject
+                    .addTrack(
+                        event.track
+                    );
+
+            }
+
+
+            /*
+               ВАЖНО:
+               muted НЕ ставим.
+            */
+
+            video.muted = false;
+
+            video.volume = 1.0;
+
+
+            video.play()
+                .then(
+                    function() {
+
+                        console.log(
+                            "▶ VIDEO PLAYING"
+                        );
+
+                    }
+                )
+                .catch(
+                    function(error) {
+
+                        console.log(
+                            "AUTOPLAY BLOCKED:",
+                            error
+                        );
+
+                    }
+                );
+
+
+            if (
+                event.track.kind ===
+                "video"
+            ) {
+
+                document
+                    .getElementById(
+                        "pcStatus"
+                    )
+                    .innerHTML =
+                    "🟢 КАМЕРА ТЕЛЕФОНА РАБОТАЕТ";
+
+                document
+                    .getElementById(
+                        "pcStatus"
+                    )
+                    .className =
+                    "status green";
+
+            }
+
+        };
+
+
+    /*
+       ICE
+    */
+
+    rtc.onicecandidate =
+        function(event) {
+
+            if (
+                event.candidate &&
+                signalConnection &&
+                signalConnection.open
+            ) {
+
+                signalConnection.send({
+
+                    type: "candidate",
+
+                    candidate:
+                        event.candidate
+
+                });
+
+            }
+
+        };
+
+
+    /*
+       Состояние
+    */
+
+    rtc.onconnectionstatechange =
+        function() {
+
+            console.log(
+                "PC RTC:",
+                rtc.connectionState
+            );
+
+
+            if (
+                rtc.connectionState ===
+                "connected"
+            ) {
+
+                document
+                    .getElementById(
+                        "pcStatus"
+                    )
+                    .innerHTML =
+                    "🟢 КАМЕРА + ЗВУК ПОДКЛЮЧЕНЫ";
+
+                document
+                    .getElementById(
+                        "pcStatus"
+                    )
+                    .className =
+                    "status green";
+
+            }
+
+
+            if (
+                rtc.connectionState ===
+                "failed"
+            ) {
+
+                document
+                    .getElementById(
+                        "pcStatus"
+                    )
+                    .innerText =
+                    "❌ WebRTC соединение не удалось";
+
+            }
+
+
+            if (
+                rtc.connectionState ===
+                "disconnected"
+            ) {
+
+                document
+                    .getElementById(
+                        "pcStatus"
+                    )
+                    .innerText =
+                    "🟡 Соединение потеряно";
+
+            }
+
+        };
+
+
+    /*
+       Получаем видео
+    */
+
+    rtc.addTransceiver(
+        "video",
+        {
+            direction: "recvonly"
+        }
+    );
+
+
+    /*
+       Получаем микрофон
+    */
+
+    rtc.addTransceiver(
+        "audio",
+        {
+            direction: "recvonly"
+        }
+    );
+
+
+    console.log(
+        "✅ PC RTC СОЗДАН"
+    );
+
+}
+
+
+/* =========================================
+   ВКЛЮЧИТЬ ЗВУК
+========================================= */
+
+function enableAudio() {
+
+    const video =
+        document
+            .getElementById(
+                "remoteVideo"
+            );
+
+
+    video.muted = false;
+
+    video.volume = 1.0;
+
+
+    video.play()
+        .then(
+            function() {
+
+                document
+                    .getElementById(
+                        "pcStatus"
+                    )
+                    .innerHTML =
+                    "🔊 Звук включён";
+
+            }
+        )
+        .catch(
+            function(error) {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    "Браузер не разрешил воспроизведение звука."
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================
+   ОСТАНОВКА
+========================================= */
+
+function stopEverything() {
+
+    if (localStream) {
+
+        localStream
+            .getTracks()
+            .forEach(
+                function(track) {
+
+                    track.stop();
+
+                }
+            );
+
+    }
+
+
+    if (rtc) {
+
+        rtc.close();
+
+        rtc = null;
+
+    }
+
+
+    if (signalConnection) {
+
+        try {
+
+            signalConnection.close();
+
+        } catch(error) {}
+
+    }
+
+
+    if (peer) {
+
+        try {
+
+            peer.destroy();
+
+        } catch(error) {}
+
+    }
+
+
+    location.reload();
+
+}
+
+</script>
 
 </body>
 </html>
