@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Трекер лица</title>
+    <!-- Используем проверенную и быструю библиотеку tracking.js -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .video-container {
+            position: relative;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        video {
+            transform: scaleX(-1); /* Зеркальное отображение */
+            border-radius: 8px;
+            background: #000;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: scaleX(-1); /* Синхронное зеркальное отображение холста */
+        }
+        #error-message {
+            color: #ff4a4a;
+            font-size: 18px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Отслеживание лица</h1>
+    <p>Если страница белая, подожди 5 секунд или проверь разрешение на камеру в углу адресной строки.</p>
+    
+    <div id="error-message"></div>
+
+    <div class="video-container">
+        <video id="video" width="640" height="480" preload autoplay loop muted></video>
+        <canvas id="canvas" width="640" height="480"></canvas>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const errorDiv = document.getElementById('error-message');
+
+        // Проверяем доступность веб-камеры в браузере
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                // Если камера доступна, запускаем отслеживание
+                startTracking();
+            })
+            .catch(function(err) {
+                errorDiv.innerHTML = "Ошибка: Нет доступа к веб-камере! <br>Нажми на иконку камеры/замочка в адресной строке браузера и разреши доступ.";
+                console.error(err);
+            });
+
+        function startTracking() {
+            // Инициализируем трекер лиц
+            const objectsTracker = new tracking.ObjectTracker('face');
+            objectsTracker.setInitialScale(4);
+            objectsTracker.setStepSize(2);
+            objectsTracker.edgesDensity = 0.1;
+
+            // Запускаем отслеживание на нашем видео-элементе
+            tracking.track('#video', objectsTracker, { camera: true });
+
+            // Каждый раз, когда лицо найдено в кадре
+            objectsTracker.on('track', function(event) {
+                // Очищаем холст от старых рамок
+                context.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (event.data.length === 0) {
+                    // Лицо не найдено
+                    return;
+                }
+
+                event.data.forEach(function(rect) {
+                    // Рисуем рамку вокруг лица
+                    context.strokeStyle = '#00ffcc';
+                    context.lineWidth = 4;
+                    context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+
+                    // Рисуем прицел в центре лица
+                    const centerX = rect.x + (rect.width / 2);
+                    const centerY = rect.y + (rect.height / 2);
+                    
+                    context.beginPath();
+                    context.arc(centerX, centerY, 8, 0, 2 * Math.PI);
+                    context.fillStyle = '#ff0055';
+                    context.fill();
+                });
+            });
+        }
+    </script>
+</body>
+</html>
