@@ -1,1214 +1,292 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Phone Camera</title>
-
-<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Мост · камера телефона на ноут</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <style>
+  :root{
+    --ink:#12181a;
+    --paper:#eef2ef;
+    --line:#0f1a17;
+    --signal:#ff5a36;
+    --signal-dim:#ffc9b8;
+    --ok:#2f9e6b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Courier New', ui-monospace, monospace;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:6vh 5vw 5vh;
+  }
+  .wire{
+    width:100%;
+    max-width:520px;
+  }
+  .wire-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom:1px solid rgba(238,242,239,.25);
+    padding-bottom:14px;
+    margin-bottom:36px;
+  }
+  .wire-top h1{
+    font-size:15px;
+    font-weight:400;
+    letter-spacing:.02em;
+    margin:0;
+  }
+  .wire-top span{
+    font-size:12px;
+    color:var(--signal-dim);
+  }
+  /* --- role picker --- */
+  .picker{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .role-btn{
+    all:unset;
+    cursor:pointer;
+    border:1px solid rgba(238,242,239,.4);
+    padding:26px 22px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .role-btn:hover{border-color:var(--signal); background:rgba(255,90,54,.06);}
+  .role-btn .name{font-size:22px;}
+  .role-btn .hint{font-size:12px; color:rgba(238,242,239,.55); text-align:right; max-width:170px; line-height:1.5;}
+  .role-btn .arrow{font-size:20px; margin-left:14px; color:var(--signal);}
 
-* {
-    box-sizing: border-box;
-}
+  /* --- shared screen chrome --- */
+  .screen{display:none;}
+  .screen.active{display:block;}
+  .back{
+    all:unset; cursor:pointer;
+    font-size:12px; color:rgba(238,242,239,.5);
+    margin-bottom:22px; display:inline-block;
+  }
+  .back:hover{color:var(--paper);}
+  .status-line{
+    display:flex; align-items:center; gap:10px;
+    font-size:13px; color:rgba(238,242,239,.7);
+    margin-bottom:22px;
+  }
+  .dot{width:8px; height:8px; border-radius:50%; background:rgba(238,242,239,.3); flex-shrink:0;}
+  .dot.live{background:var(--ok); box-shadow:0 0 0 3px rgba(47,158,107,.25);}
+  .dot.wait{background:var(--signal); animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 
-body {
-    margin: 0;
-    min-height: 100vh;
-    background: #080808;
-    color: white;
-    font-family: Arial, sans-serif;
-}
-
-.container {
-    width: 100%;
-    max-width: 900px;
-    margin: auto;
-    padding: 25px 15px;
-}
-
-h1 {
-    text-align: center;
-    font-size: 36px;
-}
-
-.subtitle {
-    text-align: center;
-    color: #888;
-    margin-bottom: 30px;
-}
-
-.card {
-    background: #151515;
-    border: 1px solid #292929;
-    border-radius: 18px;
-    padding: 25px;
-    margin-bottom: 20px;
-}
-
-.roles {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
-
-.role {
-    border: 2px solid #333;
-    background: #202020;
-    color: white;
-    border-radius: 15px;
-    padding: 35px 10px;
-    font-size: 20px;
-    cursor: pointer;
-}
-
-.role:hover {
-    border-color: #1683ff;
-}
-
-button {
-    width: 100%;
-    border: 0;
-    border-radius: 10px;
-    padding: 15px;
-    margin-top: 15px;
-    background: #1683ff;
-    color: white;
-    font-size: 17px;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #086bd1;
-}
-
-input {
-    width: 100%;
-    padding: 16px;
-    background: #090909;
-    color: white;
-    border: 1px solid #333;
-    border-radius: 10px;
-    text-align: center;
-    font-size: 28px;
-    letter-spacing: 8px;
-}
-
-.code {
-    text-align: center;
-    font-size: 52px;
-    font-weight: bold;
-    letter-spacing: 12px;
-    margin: 25px 0;
-}
-
-.status {
-    text-align: center;
-    padding: 15px;
-    color: #aaa;
-}
-
-.green {
-    color: #45e879;
-}
-
-.red {
-    background: #d83b3b;
-}
-
-.red:hover {
-    background: #b52c2c;
-}
-
-.gray {
-    background: #292929;
-}
-
-video {
-    width: 100%;
-    min-height: 200px;
-    background: #000;
-    border-radius: 15px;
-    display: block;
-    margin-top: 15px;
-    object-fit: contain;
-}
-
-.hidden {
-    display: none;
-}
-
-@media(max-width:600px) {
-
-    .roles {
-        grid-template-columns: 1fr;
-    }
-
-    h1 {
-        font-size: 30px;
-    }
-
-    .code {
-        font-size: 40px;
-    }
-
-}
-
+  /* phone screen */
+  .code-block{
+    text-align:center;
+    padding:34px 0 30px;
+    border:1px solid rgba(238,242,239,.4);
+    margin-bottom:24px;
+  }
+  .code-block .label{font-size:11px; letter-spacing:.15em; color:rgba(238,242,239,.5); margin-bottom:16px;}
+  .code-block .code{font-size:44px; letter-spacing:.12em; color:var(--signal);}
+  video{
+    width:100%;
+    background:#000;
+    display:block;
+    aspect-ratio:3/4;
+    object-fit:cover;
+  }
+  .laptop video{aspect-ratio:16/9;}
+  .field{
+    display:flex;
+    gap:10px;
+    margin-bottom:20px;
+  }
+  input[type=text]{
+    flex:1;
+    background:transparent;
+    border:1px solid rgba(238,242,239,.4);
+    color:var(--paper);
+    font-family:inherit;
+    font-size:20px;
+    letter-spacing:.1em;
+    padding:14px 16px;
+    text-transform:uppercase;
+  }
+  input[type=text]:focus{outline:none; border-color:var(--signal);}
+  input[type=text]::placeholder{color:rgba(238,242,239,.3); letter-spacing:normal;}
+  button.go{
+    all:unset; cursor:pointer;
+    background:var(--signal);
+    color:var(--ink);
+    padding:0 22px;
+    font-family:inherit;
+    font-size:14px;
+    display:flex; align-items:center;
+  }
+  button.go:hover{background:#ff7955;}
+  button.go:disabled{background:rgba(238,242,239,.15); color:rgba(238,242,239,.4); cursor:default;}
+  .note{
+    font-size:12px;
+    line-height:1.6;
+    color:rgba(238,242,239,.45);
+    margin-top:6px;
+  }
 </style>
-
 </head>
-
 <body>
+<div class="wire">
+  <div class="wire-top">
+    <h1>мост</h1>
+    <span id="topHint">телефон → ноут, напрямую</span>
+  </div>
 
-<div class="container">
+  <!-- ROLE PICKER -->
+  <div class="picker screen active" id="screenPicker">
+    <button class="role-btn" onclick="startPhone()">
+      <span class="name">📱 Телефон</span>
+      <span class="hint">отдаёт камеру и звук<span class="arrow">→</span></span>
+    </button>
+    <button class="role-btn" onclick="startLaptop()">
+      <span class="name">💻 Ноут</span>
+      <span class="hint">вводит код, принимает<span class="arrow">→</span></span>
+    </button>
+  </div>
 
-<h1>📡 Phone Camera</h1>
+  <!-- PHONE SCREEN -->
+  <div class="screen" id="screenPhone">
+    <button class="back" onclick="location.reload()">← назад</button>
+    <div class="status-line">
+      <span class="dot wait" id="phoneDot"></span>
+      <span id="phoneStatus">включаю камеру…</span>
+    </div>
+    <div class="code-block">
+      <div class="label">КОД ДЛЯ НОУТА</div>
+      <div class="code" id="phoneCode">····</div>
+    </div>
+    <video id="phoneVideo" autoplay playsinline muted></video>
+    <p class="note">Держи эту страницу открытой. Как только на ноуте введут код — трансляция пойдёт сама.</p>
+  </div>
 
-<div class="subtitle">
-Камера телефона → ноутбук
+  <!-- LAPTOP SCREEN -->
+  <div class="screen laptop" id="screenLaptop">
+    <button class="back" onclick="location.reload()">← назад</button>
+    <div class="status-line">
+      <span class="dot" id="laptopDot"></span>
+      <span id="laptopStatus">введи код с телефона</span>
+    </div>
+    <div class="field">
+      <input type="text" id="codeInput" placeholder="код с телефона" maxlength="12" autocomplete="off">
+      <button class="go" id="connectBtn" onclick="connectToPhone()">Подключить</button>
+    </div>
+    <video id="laptopVideo" autoplay playsinline></video>
+    <p class="note">Соединение прямое (WebRTC), видео не проходит через сервер — только сигнал для установки связи.</p>
+  </div>
 </div>
-
-
-<!-- ============================= -->
-<!-- ВЫБОР -->
-<!-- ============================= -->
-
-<div id="selectPanel" class="card">
-
-<h2>Выбери устройство</h2>
-
-<div class="roles">
-
-<button
-    class="role"
-    onclick="startPhone()"
->
-📱 Я ТЕЛЕФОН
-</button>
-
-<button
-    class="role"
-    onclick="startPC()"
->
-💻 Я НОУТБУК
-</button>
-
-</div>
-
-</div>
-
-
-<!-- ============================= -->
-<!-- ТЕЛЕФОН -->
-<!-- ============================= -->
-
-<div
-    id="phonePanel"
-    class="card hidden"
->
-
-<h2>📱 Телефон</h2>
-
-<p>
-Введи этот код на ноутбуке:
-</p>
-
-<div
-    id="roomCode"
-    class="code"
->
-------
-</div>
-
-<div
-    id="phoneStatus"
-    class="status"
->
-Создание кода...
-</div>
-
-<video
-    id="localVideo"
-    autoplay
-    playsinline
-    muted
-></video>
-
-<button onclick="startCamera()">
-📷 Включить камеру
-</button>
-
-<button
-    class="red"
-    onclick="stopEverything()"
->
-⛔ Остановить
-</button>
-
-</div>
-
-
-<!-- ============================= -->
-<!-- НОУТБУК -->
-<!-- ============================= -->
-
-<div
-    id="pcPanel"
-    class="card hidden"
->
-
-<h2>💻 Ноутбук</h2>
-
-<p>
-Введи код телефона:
-</p>
-
-<input
-    id="codeInput"
-    maxlength="6"
-    inputmode="numeric"
-    placeholder="000000"
->
-
-<button onclick="connectPC()">
-🔗 Подключиться
-</button>
-
-<div
-    id="pcStatus"
-    class="status"
->
-🔴 Не подключено
-</div>
-
-<video
-    id="remoteVideo"
-    autoplay
-    playsinline
-    controls
-></video>
-
-<button
-    class="gray"
-    onclick="enableAudio()"
->
-🔊 Включить звук
-</button>
-
-<button
-    class="red"
-    onclick="stopEverything()"
->
-⛔ Отключиться
-</button>
-
-</div>
-
-</div>
-
 
 <script>
-
-/* =========================================
-   ПЕРЕМЕННЫЕ
-========================================= */
-
-let peer = null;
-
-let localStream = null;
-
-let currentCall = null;
-
-let role = null;
-
-let roomCode = null;
-
-
-/* =========================================
-   PEER CONFIG
-========================================= */
-
-const peerOptions = {
-
-    debug: 2,
-
-    config: {
-
-        iceServers: [
-
-            {
-                urls:
-                "stun:stun.l.google.com:19302"
-            },
-
-            {
-                urls:
-                "stun:stun1.l.google.com:19302"
-            },
-
-            {
-                urls:
-                "stun:stun2.l.google.com:19302"
-            }
-
-        ]
-
-    }
-
-};
-
-
-/* =========================================
-   ГЕНЕРАЦИЯ КОДА
-========================================= */
-
-function generateCode() {
-
-    return String(
-        Math.floor(
-            100000 +
-            Math.random() * 900000
-        )
-    );
-
+const PREFIX = "most-";
+function randomCode(len=4){
+  const chars = "23456789ACDEFGHJKLMNPQRSTUVWXYZ";
+  let s = "";
+  for(let i=0;i<len;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
 
+/* ---------------- PHONE ROLE ---------------- */
+async function startPhone(){
+  show('screenPhone');
+  const code = randomCode();
+  document.getElementById('phoneCode').textContent = code;
 
-/* =========================================
-   ТЕЛЕФОН
-========================================= */
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:'environment' },
+      audio:true
+    });
+  }catch(e){
+    document.getElementById('phoneStatus').textContent = 'нет доступа к камере/микрофону: ' + e.message;
+    return;
+  }
+  document.getElementById('phoneVideo').srcObject = stream;
+  document.getElementById('phoneStatus').textContent = 'жду подключения ноута…';
 
-function startPhone() {
-
-    role = "phone";
-
-    document
-        .getElementById("selectPanel")
-        .classList.add("hidden");
-
-    document
-        .getElementById("phonePanel")
-        .classList.remove("hidden");
-
-    createPhonePeer();
-
+  const peer = new Peer(PREFIX + code);
+  peer.on('open', ()=>{
+    document.getElementById('phoneStatus').textContent = 'жду подключения ноута…';
+  });
+  peer.on('call', call=>{
+    call.answer(stream);
+    document.getElementById('phoneDot').classList.remove('wait');
+    document.getElementById('phoneDot').classList.add('live');
+    document.getElementById('phoneStatus').textContent = 'в эфире — ноут смотрит и слушает';
+    call.on('close', ()=>{
+      document.getElementById('phoneDot').classList.remove('live');
+      document.getElementById('phoneDot').classList.add('wait');
+      document.getElementById('phoneStatus').textContent = 'ноут отключился, жду снова…';
+    });
+  });
+  peer.on('error', err=>{
+    document.getElementById('phoneStatus').textContent = 'ошибка связи: ' + err.type;
+  });
 }
 
-
-/* =========================================
-   PEER ТЕЛЕФОНА
-========================================= */
-
-function createPhonePeer() {
-
-    roomCode = generateCode();
-
-
-    document
-        .getElementById("roomCode")
-        .innerText =
-        roomCode;
-
-
-    peer =
-        new Peer(
-            roomCode,
-            peerOptions
-        );
-
-
-    peer.on(
-        "open",
-        function(id) {
-
-            console.log(
-                "PHONE PEER ID:",
-                id
-            );
-
-
-            document
-                .getElementById(
-                    "phoneStatus"
-                )
-                .innerHTML =
-                "🟢 Код готов. Жду ноутбук...";
-
-
-            document
-                .getElementById(
-                    "phoneStatus"
-                )
-                .className =
-                "status green";
-
-        }
-    );
-
-
-    /*
-       НОУТБУК ЗВОНИТ ТЕЛЕФОНУ
-    */
-
-    peer.on(
-        "call",
-        function(call) {
-
-            console.log(
-                "📞 ВХОДЯЩИЙ WEBRTC CALL"
-            );
-
-
-            currentCall = call;
-
-
-            document
-                .getElementById(
-                    "phoneStatus"
-                )
-                .innerText =
-                "🟡 Ноутбук подключается...";
-
-
-            /*
-               Если камера уже включена —
-               сразу отвечаем
-            */
-
-            if (localStream) {
-
-                answerCall(call);
-
-            } else {
-
-                /*
-                   Камера ещё не включена.
-                   Просим включить её.
-                */
-
-                document
-                    .getElementById(
-                        "phoneStatus"
-                    )
-                    .innerText =
-                    "🟡 Ноутбук подключён. Включи камеру.";
-
-            }
-
-        }
-    );
-
-
-    peer.on(
-        "error",
-        function(error) {
-
-            console.error(
-                "PHONE PEER ERROR:",
-                error
-            );
-
-
-            document
-                .getElementById(
-                    "phoneStatus"
-                )
-                .innerText =
-                "❌ " + error.type;
-
-
-            /*
-               Если код занят —
-               генерируем новый
-            */
-
-            if (
-                error.type ===
-                "unavailable-id"
-            ) {
-
-                try {
-                    peer.destroy();
-                } catch(e) {}
-
-
-                setTimeout(
-                    createPhonePeer,
-                    500
-                );
-
-            }
-
-        }
-    );
-
+/* ---------------- LAPTOP ROLE ---------------- */
+function startLaptop(){
+  show('screenLaptop');
+  document.getElementById('codeInput').focus();
+  document.getElementById('codeInput').addEventListener('keydown', e=>{
+    if(e.key === 'Enter') connectToPhone();
+  });
 }
 
+function connectToPhone(){
+  const raw = document.getElementById('codeInput').value.trim().toUpperCase();
+  if(!raw) return;
+  const btn = document.getElementById('connectBtn');
+  btn.disabled = true;
+  document.getElementById('laptopStatus').textContent = 'соединяюсь…';
+  document.getElementById('laptopDot').classList.add('wait');
 
-/* =========================================
-   ОТВЕТ НА ЗВОНОК
-========================================= */
-
-function answerCall(call) {
-
-    console.log(
-        "📤 ОТВЕЧАЕМ НА WEBRTC CALL"
-    );
-
-
-    call.answer(
-        localStream
-    );
-
-
-    currentCall = call;
-
-
-    document
-        .getElementById(
-            "phoneStatus"
-        )
-        .innerHTML =
-        "🟢 ТРАНСЛЯЦИЯ КАМЕРЫ И ЗВУКА";
-
-
-    document
-        .getElementById(
-            "phoneStatus"
-        )
-        .className =
-        "status green";
-
-
-    call.on(
-        "close",
-        function() {
-
-            document
-                .getElementById(
-                    "phoneStatus"
-                )
-                .innerText =
-                "🔴 Ноутбук отключился";
-
-        }
-    );
-
-
-    call.on(
-        "error",
-        function(error) {
-
-            console.error(
-                "CALL ERROR:",
-                error
-            );
-
-        }
-    );
-
+  const peer = new Peer();
+  peer.on('open', ()=>{
+    const call = peer.call(PREFIX + raw, new MediaStream());
+    call.on('stream', remoteStream=>{
+      document.getElementById('laptopVideo').srcObject = remoteStream;
+      document.getElementById('laptopDot').classList.remove('wait');
+      document.getElementById('laptopDot').classList.add('live');
+      document.getElementById('laptopStatus').textContent = 'подключено — видно и слышно телефон';
+    });
+    call.on('close', ()=>{
+      document.getElementById('laptopDot').classList.remove('live');
+      document.getElementById('laptopStatus').textContent = 'телефон отключился';
+      btn.disabled = false;
+    });
+    call.on('error', ()=>{
+      document.getElementById('laptopStatus').textContent = 'не удалось подключиться, проверь код';
+      document.getElementById('laptopDot').classList.remove('wait');
+      btn.disabled = false;
+    });
+  });
+  peer.on('error', err=>{
+    document.getElementById('laptopStatus').textContent = 'ошибка: ' + err.type + ' (проверь код)';
+    document.getElementById('laptopDot').classList.remove('wait');
+    btn.disabled = false;
+  });
 }
-
-
-/* =========================================
-   КАМЕРА
-========================================= */
-
-async function startCamera() {
-
-    try {
-
-        console.log(
-            "📷 Запрашиваем камеру..."
-        );
-
-
-        localStream =
-            await navigator
-                .mediaDevices
-                .getUserMedia({
-
-                    video: {
-
-                        facingMode: {
-                            ideal: "environment"
-                        },
-
-                        width: {
-                            ideal: 1280
-                        },
-
-                        height: {
-                            ideal: 720
-                        },
-
-                        frameRate: {
-                            ideal: 30
-                        }
-
-                    },
-
-                    audio: {
-
-                        echoCancellation: true,
-
-                        noiseSuppression: true,
-
-                        autoGainControl: true
-
-                    }
-
-                });
-
-
-        console.log(
-            "✅ КАМЕРА ПОЛУЧЕНА"
-        );
-
-
-        /*
-           Показываем камеру
-           самому телефону
-        */
-
-        const localVideo =
-            document.getElementById(
-                "localVideo"
-            );
-
-
-        localVideo.srcObject =
-            localStream;
-
-
-        localVideo.muted = true;
-
-
-        localVideo.play()
-            .catch(
-                function(error) {
-
-                    console.log(
-                        "LOCAL PLAY ERROR:",
-                        error
-                    );
-
-                }
-            );
-
-
-        document
-            .getElementById(
-                "phoneStatus"
-            )
-            .innerHTML =
-            "🟢 Камера и микрофон включены";
-
-
-        document
-            .getElementById(
-                "phoneStatus"
-            )
-            .className =
-            "status green";
-
-
-        /*
-           Если ноутбук уже позвонил —
-           отвечаем
-        */
-
-        if (currentCall) {
-
-            answerCall(currentCall);
-
-        }
-
-    } catch(error) {
-
-        console.error(
-            "CAMERA ERROR:",
-            error
-        );
-
-
-        alert(
-            "Не удалось включить камеру:\n\n" +
-            error.message
-        );
-
-    }
-
-}
-
-
-/* =========================================
-   НОУТБУК
-========================================= */
-
-function startPC() {
-
-    role = "pc";
-
-
-    document
-        .getElementById(
-            "selectPanel"
-        )
-        .classList.add("hidden");
-
-
-    document
-        .getElementById(
-            "pcPanel"
-        )
-        .classList.remove("hidden");
-
-
-    peer =
-        new Peer(
-            peerOptions
-        );
-
-
-    peer.on(
-        "open",
-        function(id) {
-
-            console.log(
-                "PC PEER:",
-                id
-            );
-
-
-            document
-                .getElementById(
-                    "pcStatus"
-                )
-                .innerHTML =
-                "🟢 Готов. Введи код телефона.";
-
-        }
-    );
-
-
-    peer.on(
-        "error",
-        function(error) {
-
-            console.error(
-                "PC PEER ERROR:",
-                error
-            );
-
-
-            document
-                .getElementById(
-                    "pcStatus"
-                )
-                .innerText =
-                "❌ " + error.type;
-
-        }
-    );
-
-}
-
-
-/* =========================================
-   ПОДКЛЮЧИТЬСЯ К ТЕЛЕФОНУ
-========================================= */
-
-function connectPC() {
-
-    const code =
-        document
-            .getElementById(
-                "codeInput"
-            )
-            .value
-            .trim();
-
-
-    if (!/^\d{6}$/.test(code)) {
-
-        alert(
-            "Введи 6 цифр."
-        );
-
-        return;
-
-    }
-
-
-    if (!peer) {
-
-        alert(
-            "Peer ещё не готов."
-        );
-
-        return;
-
-    }
-
-
-    document
-        .getElementById(
-            "pcStatus"
-        )
-        .innerText =
-        "🟡 Подключаемся к телефону...";
-
-
-    console.log(
-        "📞 Звоним телефону:",
-        code
-    );
-
-
-    /*
-       Создаём пустой поток.
-
-       Мы ничего не отправляем
-       с ноутбука.
-
-       Нам нужно только получить
-       камеру телефона.
-    */
-
-    const emptyStream =
-        new MediaStream();
-
-
-    const call =
-        peer.call(
-            code,
-            emptyStream
-        );
-
-
-    if (!call) {
-
-        document
-            .getElementById(
-                "pcStatus"
-            )
-            .innerText =
-            "❌ Не удалось создать звонок";
-
-        return;
-
-    }
-
-
-    currentCall = call;
-
-
-    document
-        .getElementById(
-            "pcStatus"
-        )
-        .innerText =
-        "🟡 Телефон найден. Получаем камеру...";
-
-
-    /*
-       ПОЛУЧАЕМ ПОТОК
-    */
-
-    call.on(
-        "stream",
-        function(remoteStream) {
-
-            console.log(
-                "🎥🎤 REMOTE STREAM ПОЛУЧЕН!"
-            );
-
-
-            console.log(
-                "Видео:",
-                remoteStream.getVideoTracks()
-            );
-
-
-            console.log(
-                "Аудио:",
-                remoteStream.getAudioTracks()
-            );
-
-
-            const video =
-                document
-                    .getElementById(
-                        "remoteVideo"
-                    );
-
-
-            /*
-               Самое главное:
-               ставим поток прямо
-               в video
-            */
-
-            video.srcObject =
-                remoteStream;
-
-
-            video.muted = false;
-
-            video.volume = 1.0;
-
-
-            /*
-               Ждём загрузку видео
-            */
-
-            video.onloadedmetadata =
-                function() {
-
-                    console.log(
-                        "📺 VIDEO METADATA LOADED"
-                    );
-
-
-                    video.play()
-                        .then(
-                            function() {
-
-                                console.log(
-                                    "▶ VIDEO PLAYING"
-                                );
-
-
-                                document
-                                    .getElementById(
-                                        "pcStatus"
-                                    )
-                                    .innerHTML =
-                                    "🟢 КАМЕРА ТЕЛЕФОНА РАБОТАЕТ";
-
-                                document
-                                    .getElementById(
-                                        "pcStatus"
-                                    )
-                                    .className =
-                                    "status green";
-
-                            }
-                        )
-                        .catch(
-                            function(error) {
-
-                                console.error(
-                                    "PLAY ERROR:",
-                                    error
-                                );
-
-                                document
-                                    .getElementById(
-                                        "pcStatus"
-                                    )
-                                    .innerText =
-                                    "🟡 Поток получен. Нажми «Включить звук».";
-
-                            }
-                        );
-
-                };
-
-
-            /*
-               На всякий случай запускаем
-               play ещё раз
-            */
-
-            video.play()
-                .catch(
-                    function(error) {
-
-                        console.log(
-                            "AUTOPLAY:",
-                            error
-                        );
-
-                    }
-                );
-
-        }
-    );
-
-
-    call.on(
-        "close",
-        function() {
-
-            console.log(
-                "CALL CLOSED"
-            );
-
-
-            document
-                .getElementById(
-                    "pcStatus"
-                )
-                .innerText =
-                "🔴 Телефон отключился";
-
-
-            const video =
-                document
-                    .getElementById(
-                        "remoteVideo"
-                    );
-
-
-            video.srcObject = null;
-
-        }
-    );
-
-
-    call.on(
-        "error",
-        function(error) {
-
-            console.error(
-                "WEBRTC CALL ERROR:",
-                error
-            );
-
-
-            document
-                .getElementById(
-                    "pcStatus"
-                )
-                .innerText =
-                "❌ Ошибка соединения: " +
-                error.message;
-
-        }
-    );
-
-}
-
-
-/* =========================================
-   ЗВУК
-========================================= */
-
-function enableAudio() {
-
-    const video =
-        document
-            .getElementById(
-                "remoteVideo"
-            );
-
-
-    video.muted = false;
-
-    video.volume = 1.0;
-
-
-    video.play()
-        .then(
-            function() {
-
-                document
-                    .getElementById(
-                        "pcStatus"
-                    )
-                    .innerHTML =
-                    "🔊 ЗВУК ВКЛЮЧЁН";
-
-                document
-                    .getElementById(
-                        "pcStatus"
-                    )
-                    .className =
-                    "status green";
-
-            }
-        )
-        .catch(
-            function(error) {
-
-                console.error(
-                    error
-                );
-
-                alert(
-                    "Браузер заблокировал звук."
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================
-   ОСТАНОВКА
-========================================= */
-
-function stopEverything() {
-
-    console.log(
-        "⛔ Остановка"
-    );
-
-
-    if (currentCall) {
-
-        try {
-
-            currentCall.close();
-
-        } catch(e) {}
-
-        currentCall = null;
-
-    }
-
-
-    if (localStream) {
-
-        localStream
-            .getTracks()
-            .forEach(
-                function(track) {
-
-                    track.stop();
-
-                }
-            );
-
-        localStream = null;
-
-    }
-
-
-    if (peer) {
-
-        try {
-
-            peer.destroy();
-
-        } catch(e) {}
-
-        peer = null;
-
-    }
-
-
-    location.reload();
-
-}
-
 </script>
-
 </body>
 </html>
