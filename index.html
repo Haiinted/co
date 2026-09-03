@@ -25,7 +25,7 @@
             margin-top: 20px;
         }
         video {
-            transform: scaleX(-1);
+            transform: scaleX(-1); /* Зеркалим видео */
             border-radius: 8px;
             background: #000;
         }
@@ -33,15 +33,23 @@
             position: absolute;
             top: 0;
             left: 0;
-            transform: scaleX(-1);
+            transform: scaleX(-1); /* Зеркалим холст */
+        }
+        #status-text {
+            font-size: 18px;
+            color: #00ffcc;
+            margin-top: 10px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
     <h1>Отслеживание лица (MediaPipe)</h1>
+    <div id="status-text">Инициализация камеры и трекера...</div>
     
     <div class="video-container">
+        <!-- Тег video настроен на автоматический запуск -->
         <video id="video" width="640" height="480" autoplay playsinline muted></video>
         <canvas id="canvas" width="640" height="480"></canvas>
     </div>
@@ -50,7 +58,9 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
+        const statusText = document.getElementById('status-text');
 
+        // Инициализируем трекер лица от Google
         const faceDetection = new FaceDetection({
             locateFile: (file) => `https://jsdelivr.net{file}`
         });
@@ -60,20 +70,25 @@
             minDetectionConfidence: 0.5
         });
 
+        // Функция обработки результатов распознавания
         faceDetection.onResults((results) => {
+            statusText.innerText = "Система активна! Смотрите в камеру.";
+            statusText.style.color = "#00ffcc";
+            
+            // Очищаем холст перед новым кадром
             context.clearRect(0, 0, canvas.width, canvas.height);
 
             if (results.detections && results.detections.length > 0) {
                 results.detections.forEach((detection) => {
-                    // Рисуем рамку и точки на лице
+                    // Рисуем зеленую рамку вокруг лица и точки глаз/носа
                     drawDetection(context, detection, {color: '#00ffcc', lineWidth: 3});
 
-                    // Находим центр лица
+                    // Находим центр лица для жирного прицела
                     const bbox = detection.location_data.relativeBoundingBox;
                     const cx = (bbox.xmin + bbox.width / 2) * canvas.width;
                     const cy = (bbox.ymin + bbox.height / 2) * canvas.height;
 
-                    // Рисуем розовую точку по центру
+                    // Рисуем яркую розовую точку прямо по центру лица
                     context.beginPath();
                     context.arc(cx, cy, 10, 0, 2 * Math.PI);
                     context.fillStyle = '#ff0055';
@@ -85,15 +100,32 @@
             }
         });
 
-        const camera = new Camera(video, {
-            onFrame: async () => {
-                await faceDetection.send({ image: video });
-            },
-            width: 640,
-            height: 480
+        // Классический и самый надежный способ запуска веб-камеры в Chrome
+        navigator.mediaDevices.getUserMedia({ 
+            video: { width: 640, height: 480 } 
+        })
+        .then(function(stream) {
+            video.srcObject = stream;
+            video.onloadedmetadata = function() {
+                video.play();
+                statusText.innerText = "Камера запущена. Подключаем искусственный интеллект...";
+                
+                // Передаем кадры из видеопотока в MediaPipe
+                const camera = new Camera(video, {
+                    onFrame: async () => {
+                        await faceDetection.send({ image: video });
+                    },
+                    width: 640,
+                    height: 480
+                });
+                camera.start();
+            };
+        })
+        .catch(function(err) {
+            statusText.innerText = "Ошибка: Не удалось получить доступ к веб-камере.";
+            statusText.style.color = "#ff4a4a";
+            console.error(err);
         });
-        
-        camera.start();
     </script>
 </body>
 </html>
