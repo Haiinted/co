@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мощный трекер лица</title>
     
-    <!-- Подключаем официальные скрипты от Google MediaPipe с защитой от кэширования -->
+    <!-- Подключаем официальные скрипты от Google MediaPipe -->
     <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
     <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
     <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
@@ -25,7 +25,7 @@
             margin-top: 20px;
         }
         video {
-            transform: scaleX(-1); /* Зеркалим видео */
+            transform: scaleX(-1);
             border-radius: 8px;
             background: #000;
         }
@@ -33,14 +33,13 @@
             position: absolute;
             top: 0;
             left: 0;
-            transform: scaleX(-1); /* Зеркалим холст */
+            transform: scaleX(-1);
         }
     </style>
 </head>
 <body>
 
     <h1>Отслеживание лица (MediaPipe)</h1>
-    <div id="status">Загрузка трекера...</div>
     
     <div class="video-container">
         <video id="video" width="640" height="480" autoplay playsinline muted></video>
@@ -51,9 +50,7 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
-        const statusDiv = document.getElementById('status');
 
-        // Инициализируем продвинутый трекер лица от Google
         const faceDetection = new FaceDetection({
             locateFile: (file) => `https://jsdelivr.net{file}`
         });
@@ -63,22 +60,20 @@
             minDetectionConfidence: 0.5
         });
 
-        // Функция отрисовки
         faceDetection.onResults((results) => {
-            statusDiv.innerText = "Система активна. Ищите лицо в кадре.";
             context.clearRect(0, 0, canvas.width, canvas.height);
 
             if (results.detections && results.detections.length > 0) {
                 results.detections.forEach((detection) => {
-                    // Рисуем рамку вокруг лица и точки глаз/носа
+                    // Рисуем рамку и точки на лице
                     drawDetection(context, detection, {color: '#00ffcc', lineWidth: 3});
 
-                    // Находим центр лица для жирного прицела
+                    // Находим центр лица
                     const bbox = detection.location_data.relativeBoundingBox;
                     const cx = (bbox.xmin + bbox.width / 2) * canvas.width;
                     const cy = (bbox.ymin + bbox.height / 2) * canvas.height;
 
-                    // Рисуем яркую розовую точку прямо по центру лица
+                    // Рисуем розовую точку по центру
                     context.beginPath();
                     context.arc(cx, cy, 10, 0, 2 * Math.PI);
                     context.fillStyle = '#ff0055';
@@ -90,7 +85,6 @@
             }
         });
 
-        // Запускаем камеру
         const camera = new Camera(video, {
             onFrame: async () => {
                 await faceDetection.send({ image: video });
@@ -99,12 +93,7 @@
             height: 480
         });
         
-        camera.start().then(() => {
-            statusDiv.innerText = "Камера включена. Ждем распознавания...";
-        }).catch(err => {
-            statusDiv.innerText = "Ошибка запуска камеры. Убедитесь, что закрыли Google Meet.";
-            console.error(err);
-        });
+        camera.start();
     </script>
 </body>
 </html>
