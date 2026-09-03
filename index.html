@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Трекер лица</title>
-    <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
+    <title>Мощный трекер лица</title>
+    
+    <!-- Подключаем официальные скрипты от Google MediaPipe с защитой от кэширования -->
+    <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
+    <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
+    <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
 
     <style>
         body {
@@ -22,7 +25,7 @@
             margin-top: 20px;
         }
         video {
-            transform: scaleX(-1);
+            transform: scaleX(-1); /* Зеркалим видео */
             border-radius: 8px;
             background: #000;
         }
@@ -30,24 +33,16 @@
             position: absolute;
             top: 0;
             left: 0;
-            transform: scaleX(-1);
-        }
-        #error-message {
-            color: #ff4a4a;
-            font-size: 18px;
-            margin-top: 15px;
-            font-weight: bold;
+            transform: scaleX(-1); /* Зеркалим холст */
         }
     </style>
 </head>
 <body>
 
-    <h1>Отслеживание лица</h1>
+    <h1>Отслеживание лица (MediaPipe)</h1>
+    <div id="status">Загрузка трекера...</div>
     
-    <div id="error-message"></div>
-
     <div class="video-container">
-        <!-- Добавили важные атрибуты для корректного автоплея камеры -->
         <video id="video" width="640" height="480" autoplay playsinline muted></video>
         <canvas id="canvas" width="640" height="480"></canvas>
     </div>
@@ -56,53 +51,60 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
-        const errorDiv = document.getElementById('error-message');
+        const statusDiv = document.getElementById('status');
 
-        // Запрашиваем камеру с явным указанием размеров кадров
-        navigator.mediaDevices.getUserMedia({ 
-            video: { width: 640, height: 480 } 
-        })
-        .then(function(stream) {
-            // Привязываем видеопоток к тегу video
-            video.srcObject = stream;
-            video.onloadedmetadata = function(e) {
-                video.play();
-                startTracking(); // Запускаем трекер только после того, как видео пошло
-            };
-        })
-        .catch(function(err) {
-            errorDiv.innerHTML = "Ошибка: Камера не отвечает или занята другой программой (например, Google Meet). Закрой другие вкладки и обнови страницу.";
-            console.error(err);
+        // Инициализируем продвинутый трекер лица от Google
+        const faceDetection = new FaceDetection({
+            locateFile: (file) => `https://jsdelivr.net{file}`
         });
 
-        function startTracking() {
-            const objectsTracker = new tracking.ObjectTracker('face');
-            objectsTracker.setInitialScale(4);
-            objectsTracker.setStepSize(2);
-            objectsTracker.edgesDensity = 0.1;
+        faceDetection.setOptions({
+            modelSelection: 0, 
+            minDetectionConfidence: 0.5
+        });
 
-            tracking.track('#video', objectsTracker);
+        // Функция отрисовки
+        faceDetection.onResults((results) => {
+            statusDiv.innerText = "Система активна. Ищите лицо в кадре.";
+            context.clearRect(0, 0, canvas.width, canvas.height);
 
-            objectsTracker.on('track', function(event) {
-                context.clearRect(0, 0, canvas.width, canvas.height);
+            if (results.detections && results.detections.length > 0) {
+                results.detections.forEach((detection) => {
+                    // Рисуем рамку вокруг лица и точки глаз/носа
+                    drawDetection(context, detection, {color: '#00ffcc', lineWidth: 3});
 
-                event.data.forEach(function(rect) {
-                    // Зеленая рамка вокруг лица
-                    context.strokeStyle = '#00ffcc';
-                    context.lineWidth = 4;
-                    context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+                    // Находим центр лица для жирного прицела
+                    const bbox = detection.location_data.relativeBoundingBox;
+                    const cx = (bbox.xmin + bbox.width / 2) * canvas.width;
+                    const cy = (bbox.ymin + bbox.height / 2) * canvas.height;
 
-                    // Розовый прицел в центре лица
-                    const centerX = rect.x + (rect.width / 2);
-                    const centerY = rect.y + (rect.height / 2);
-                    
+                    // Рисуем яркую розовую точку прямо по центру лица
                     context.beginPath();
-                    context.arc(centerX, centerY, 8, 0, 2 * Math.PI);
+                    context.arc(cx, cy, 10, 0, 2 * Math.PI);
                     context.fillStyle = '#ff0055';
                     context.fill();
+                    context.strokeStyle = '#fff';
+                    context.lineWidth = 2;
+                    context.stroke();
                 });
-            });
-        }
+            }
+        });
+
+        // Запускаем камеру
+        const camera = new Camera(video, {
+            onFrame: async () => {
+                await faceDetection.send({ image: video });
+            },
+            width: 640,
+            height: 480
+        });
+        
+        camera.start().then(() => {
+            statusDiv.innerText = "Камера включена. Ждем распознавания...";
+        }).catch(err => {
+            statusDiv.innerText = "Ошибка запуска камеры. Убедитесь, что закрыли Google Meet.";
+            console.error(err);
+        });
     </script>
 </body>
 </html>
