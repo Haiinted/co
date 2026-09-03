@@ -1,131 +1,279 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мощный трекер лица</title>
-    
-    <!-- Подключаем официальные скрипты от Google MediaPipe -->
-    <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
-    <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
-    <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #1e1e1e;
-            color: white;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-        }
-        .video-container {
-            position: relative;
-            display: inline-block;
-            margin-top: 20px;
-        }
-        video {
-            transform: scaleX(-1); /* Зеркалим видео */
-            border-radius: 8px;
-            background: #000;
-        }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform: scaleX(-1); /* Зеркалим холст */
-        }
-        #status-text {
-            font-size: 18px;
-            color: #00ffcc;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Face Tracker</title>
+<style>
+*{box-sizing:border-box}
+body{
+    margin:0;
+    background:#111;
+    color:#fff;
+    font-family:Arial,sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:100vh;
+    padding:20px;
+}
+h1{margin:5px 0 8px}
+#status{margin-bottom:15px;color:#aaa}
+.camera{
+    position:relative;
+    width:min(900px,95vw);
+    aspect-ratio:16/9;
+    overflow:hidden;
+    border-radius:18px;
+    background:#000;
+    box-shadow:0 0 35px #000;
+}
+video,canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+video{transform:scaleX(-1)}
+canvas{pointer-events:none}
+.info{
+    width:min(900px,95vw);
+    margin-top:15px;
+    padding:14px 18px;
+    border-radius:12px;
+    background:#1d1d1d;
+}
+.row{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+}
+button{
+    margin-top:12px;
+    padding:10px 18px;
+    border:0;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:16px;
+}
+</style>
 </head>
+
 <body>
+<h1>👁️ Face Tracker</h1>
+<div id="status">Загрузка модели...</div>
 
-    <h1>Отслеживание лица (MediaPipe)</h1>
-    <div id="status-text">Инициализация камеры и трекера...</div>
-    
-    <div class="video-container">
-        <!-- Тег video настроен на автоматический запуск -->
-        <video id="video" width="640" height="480" autoplay playsinline muted></video>
-        <canvas id="canvas" width="640" height="480"></canvas>
+<div class="camera">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="canvas"></canvas>
+</div>
+
+<div class="info">
+    <div class="row">
+        <span>👤 Лицо: <b id="face">—</b></span>
+        <span>👀 Глаза: <b id="eyes">—</b></span>
+        <span>🧭 Голова: <b id="head">—</b></span>
     </div>
+    <button id="start">Включить камеру</button>
+</div>
 
-    <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
-        const statusText = document.getElementById('status-text');
+<script type="module">
+import vision from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22";
+const {FaceLandmarker, FilesetResolver} = vision;
 
-        // Инициализируем трекер лица от Google
-        const faceDetection = new FaceDetection({
-            locateFile: (file) => `https://jsdelivr.net{file}`
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const status = document.getElementById("status");
+const faceText = document.getElementById("face");
+const eyesText = document.getElementById("eyes");
+const headText = document.getElementById("head");
+const startBtn = document.getElementById("start");
+
+let faceLandmarker;
+let running = false;
+
+async function loadModel(){
+    const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
+    );
+
+    faceLandmarker = await FaceLandmarker.createFromOptions(fileset,{
+        baseOptions:{
+            modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+            delegate:"GPU"
+        },
+        runningMode:"VIDEO",
+        numFaces:1,
+        minFaceDetectionConfidence:0.5,
+        minFacePresenceConfidence:0.5,
+        minTrackingConfidence:0.5,
+        outputFaceBlendshapes:false,
+        outputFacialTransformationMatrixes:true
+    });
+
+    status.textContent="Модель загружена. Нажми «Включить камеру».";
+}
+
+async function startCamera(){
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video:{
+                facingMode:"user",
+                width:{ideal:1280},
+                height:{ideal:720}
+            },
+            audio:false
         });
 
-        faceDetection.setOptions({
-            modelSelection: 0, 
-            minDetectionConfidence: 0.5
-        });
+        video.srcObject=stream;
+        await video.play();
 
-        // Функция обработки результатов распознавания
-        faceDetection.onResults((results) => {
-            statusText.innerText = "Система активна! Смотрите в камеру.";
-            statusText.style.color = "#00ffcc";
-            
-            // Очищаем холст перед новым кадром
-            context.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width=video.videoWidth || 1280;
+        canvas.height=video.videoHeight || 720;
 
-            if (results.detections && results.detections.length > 0) {
-                results.detections.forEach((detection) => {
-                    // Рисуем зеленую рамку вокруг лица и точки глаз/носа
-                    drawDetection(context, detection, {color: '#00ffcc', lineWidth: 3});
+        running=true;
+        startBtn.style.display="none";
+        status.textContent="Камера работает — лицо отслеживается.";
+        requestAnimationFrame(track);
+    }catch(err){
+        console.error(err);
+        status.textContent="Не удалось получить доступ к камере: "+err.message;
+    }
+}
 
-                    // Находим центр лица для жирного прицела
-                    const bbox = detection.location_data.relativeBoundingBox;
-                    const cx = (bbox.xmin + bbox.width / 2) * canvas.width;
-                    const cy = (bbox.ymin + bbox.height / 2) * canvas.height;
+function distance(a,b){
+    return Math.hypot(a.x-b.x,a.y-b.y);
+}
 
-                    // Рисуем яркую розовую точку прямо по центру лица
-                    context.beginPath();
-                    context.arc(cx, cy, 10, 0, 2 * Math.PI);
-                    context.fillStyle = '#ff0055';
-                    context.fill();
-                    context.strokeStyle = '#fff';
-                    context.lineWidth = 2;
-                    context.stroke();
-                });
+function drawPoint(p,color="#00ff88",size=2.2){
+    ctx.beginPath();
+    ctx.arc(p.x*canvas.width,p.y*canvas.height,size,0,Math.PI*2);
+    ctx.fillStyle=color;
+    ctx.fill();
+}
+
+function drawLine(a,b,color="#00ff88",width=1.5){
+    ctx.beginPath();
+    ctx.moveTo(a.x*canvas.width,a.y*canvas.height);
+    ctx.lineTo(b.x*canvas.width,b.y*canvas.height);
+    ctx.strokeStyle=color;
+    ctx.lineWidth=width;
+    ctx.stroke();
+}
+
+function track(){
+    if(!running) return;
+
+    if(video.readyState >= 2){
+        const now = performance.now();
+        const result = faceLandmarker.detectForVideo(video, now);
+
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+
+        if(result.faceLandmarks.length){
+            const lm = result.faceLandmarks[0];
+
+            faceText.textContent="найдено";
+
+            // Все основные точки лица
+            for(const p of lm) drawPoint(p);
+
+            // Контур лица
+            const faceOutline = [
+                10,338,297,332,284,251,389,356,454,323,361,288,
+                397,365,379,378,400,377,152,148,176,149,150,136,
+                172,58,132,93,234,127,162,21,54,103,67,109,10
+            ];
+
+            for(let i=0;i<faceOutline.length-1;i++){
+                drawLine(
+                    lm[faceOutline[i]],
+                    lm[faceOutline[i+1]],
+                    "#00ff88",
+                    2
+                );
             }
-        });
 
-        // Классический и самый надежный способ запуска веб-камеры в Chrome
-        navigator.mediaDevices.getUserMedia({ 
-            video: { width: 640, height: 480 } 
-        })
-        .then(function(stream) {
-            video.srcObject = stream;
-            video.onloadedmetadata = function() {
-                video.play();
-                statusText.innerText = "Камера запущена. Подключаем искусственный интеллект...";
-                
-                // Передаем кадры из видеопотока в MediaPipe
-                const camera = new Camera(video, {
-                    onFrame: async () => {
-                        await faceDetection.send({ image: video });
-                    },
-                    width: 640,
-                    height: 480
-                });
-                camera.start();
+            // Глаза
+            const leftEye = [33,160,158,133,153,144];
+            const rightEye = [362,385,387,263,373,380];
+
+            [...leftEye,...rightEye].forEach(i=>drawPoint(lm[i],"#00aaff",3));
+
+            drawLine(lm[33],lm[133],"#00aaff",2);
+            drawLine(lm[362],lm[263],"#00aaff",2);
+
+            // Центры глаз
+            const leftCenter={
+                x:(lm[33].x+lm[133].x)/2,
+                y:(lm[33].y+lm[133].y)/2
             };
-        })
-        .catch(function(err) {
-            statusText.innerText = "Ошибка: Не удалось получить доступ к веб-камере.";
-            statusText.style.color = "#ff4a4a";
-            console.error(err);
-        });
-    </script>
+            const rightCenter={
+                x:(lm[362].x+lm[263].x)/2,
+                y:(lm[362].y+lm[263].y)/2
+            };
+
+            drawPoint(leftCenter,"#ffffff",5);
+            drawPoint(rightCenter,"#ffffff",5);
+
+            eyesText.textContent="отслеживаются";
+
+            // Приблизительная оценка направления головы
+            const nose=lm[1];
+            const leftSide=lm[234];
+            const rightSide=lm[454];
+            const top=lm[10];
+            const chin=lm[152];
+
+            const faceCenterX=(leftSide.x+rightSide.x)/2;
+            const horizontal=nose.x-faceCenterX;
+
+            const faceCenterY=(top.y+chin.y)/2;
+            const vertical=nose.y-faceCenterY;
+
+            let horizontalDirection;
+            if(horizontal < -0.045) horizontalDirection="← влево";
+            else if(horizontal > 0.045) horizontalDirection="→ вправо";
+            else horizontalDirection="по центру";
+
+            let verticalDirection;
+            if(vertical < -0.035) verticalDirection="↑ вверх";
+            else if(vertical > 0.035) verticalDirection="↓ вниз";
+            else verticalDirection="прямо";
+
+            headText.textContent =
+                horizontalDirection+" / "+verticalDirection;
+
+            // Центральная точка носа
+            drawPoint(nose,"#ff3333",6);
+
+            // Линия направления головы
+            drawLine(
+                {x:faceCenterX,y:faceCenterY},
+                {x:nose.x,y:nose.y},
+                "#ff3333",
+                3
+            );
+        }else{
+            faceText.textContent="не найдено";
+            eyesText.textContent="—";
+            headText.textContent="—";
+        }
+    }
+
+    requestAnimationFrame(track);
+}
+
+startBtn.addEventListener("click",startCamera);
+
+loadModel().catch(err=>{
+    console.error(err);
+    status.textContent="Ошибка загрузки модели: "+err.message;
+});
+</script>
 </body>
 </html>
